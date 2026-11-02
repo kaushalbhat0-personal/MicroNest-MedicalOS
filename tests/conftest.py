@@ -38,22 +38,39 @@ from app.platform.ratelimit import limiter  # noqa: E402
 ALL_TABLES = [
     "audit_events",
     "auth_events",
+    "clinical_notes",
+    "consents",
     "credentials",
+    "dental_procedure_records",
+    "document_references",
+    "encounter_diagnoses",
+    "encounters",
     "invitations",
     "locations",
     "membership_locations",
     "memberships",
+    "observations",
     "outbox_events",
     "password_resets",
-    "patients",
-    "appointments",
     "practitioner_verifications",
     "practitioners",
+    "prescription_items",
+    "prescriptions",
+    "recalls",
     "roles",
     "sessions",
     "tenants",
+    "tooth_finding_surfaces",
+    "tooth_findings",
+    "treatment_plan_items",
+    "treatment_plans",
     "users",
+    "patients",
+    "appointments",
 ]
+# Global read-only catalogs (observation_types, diagnosis_codes, medications,
+# dental_conditions, dental_procedures) are seeded by migrations and never
+# truncated: no write endpoint exists, so tests cannot dirty them.
 
 
 def _owner_factory():  # type: ignore[no-untyped-def]

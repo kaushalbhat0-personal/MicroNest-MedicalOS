@@ -1,2 +1,4 @@
-"""P6 scope (data model lands in P3). Dental extension: consumes platform
-primitives, never duplicates patient/appointment/billing."""
+"""Dental clinical extension. Consumes generic patient/encounter/practitioner
+primitives — never duplicates them (no DentalPatient, no DentalAppointment,
+no billing). Findings are clinical facts over time; the odontogram is a
+projection derived from these rows, never stored as pixels."""

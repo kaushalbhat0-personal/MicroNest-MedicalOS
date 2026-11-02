@@ -3,7 +3,19 @@
 from fastapi import APIRouter
 
 from app.api import errors as error_handlers
-from app.api.v1 import account, audit, auth, invites, patients, platform, scheduling, tenants
+from app.api.v1 import (
+    account,
+    audit,
+    auth,
+    dental,
+    encounters,
+    invites,
+    patients,
+    platform,
+    prescriptions,
+    scheduling,
+    tenants,
+)
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router, responses=error_handlers.AUTHN_RESPONSES)
@@ -14,3 +26,6 @@ router.include_router(tenants.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(audit.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(patients.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(scheduling.router, responses=error_handlers.AUTHZ_RESPONSES)
+router.include_router(encounters.router, responses=error_handlers.AUTHZ_RESPONSES)
+router.include_router(prescriptions.router, responses=error_handlers.AUTHZ_RESPONSES)
+router.include_router(dental.router, responses=error_handlers.AUTHZ_RESPONSES)

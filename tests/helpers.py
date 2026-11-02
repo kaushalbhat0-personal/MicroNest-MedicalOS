@@ -89,3 +89,48 @@ def provision_scheduling(
     )
     owner_db.commit()
     return {**base, "practitioner": practitioner, "patient": patient}
+
+
+def provision_clinical(
+    owner_db,
+    make_owner_user,
+    make_tenant,
+    *,
+    slug: str | None = None,
+    admin_email: str | None = None,
+    doctor_email: str | None = None,
+    practitioner_name: str = "Dr Clinical",
+    patient_name: str = "Pat Clinical",
+):  # type: ignore[no-untyped-def]
+    """Tenant + admin + doctor (user-linked, approved practitioner) + patient."""
+    from app.modules.patients import service as patients_service
+    from app.modules.tenancy import service as tenancy_service
+
+    base = provision_tenant(
+        owner_db,
+        make_owner_user,
+        make_tenant,
+        slug=slug,
+        admin_email=admin_email,
+    )
+    tenant = base["tenant"]
+    doctor = make_owner_user(
+        email=doctor_email or f"doc-{uuid.uuid4().hex[:6]}@example.com"
+    )
+    practitioner = tenancy_service.register_practitioner(
+        owner_db, display_name=practitioner_name, user=doctor
+    )
+    tenancy_service.set_verification(
+        owner_db, tenant=tenant, practitioner=practitioner, status="approved"
+    )
+    tenancy_service.create_membership(
+        owner_db,
+        user=doctor,
+        tenant=tenant,
+        role=tenancy_service.get_seed_role(owner_db, "doctor"),
+    )
+    patient = patients_service.register_patient(
+        owner_db, tenant_id=tenant.id, display_name=patient_name
+    )
+    owner_db.commit()
+    return {**base, "doctor": doctor, "practitioner": practitioner, "patient": patient}

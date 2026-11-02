@@ -6,10 +6,10 @@ from fastapi import Response
 from sqlalchemy.orm import Session as DBSession
 
 from app.modules.identity import schemas as S
-from app.modules.identity.models import User
+from app.modules.identity.models import Practitioner, User
 from app.modules.tenancy import service as tenancy_service
 from app.platform.authz.scope import RequestContext
-from app.platform.errors import NotFoundError
+from app.platform.errors import ForbiddenError, NotFoundError
 from app.platform.logging_setup import get_logger
 
 log = get_logger(__name__)
@@ -32,6 +32,20 @@ def match_tenant(ctx: RequestContext, tenant_id: uuid.UUID) -> None:
     403-oracle (a cross-tenant probe learns nothing). Single implementation."""
     if tenant_id != ctx.tenant_id:
         raise NotFoundError("not found")
+
+
+def practitioner_for_user(db: DBSession, user_id: uuid.UUID) -> Practitioner:
+    """Resolve the practitioner's clinical identity for the caller. Provider
+    attribution is server-derived (users → practitioners link), never taken
+    from request payloads. Single implementation."""
+    from sqlalchemy import select
+
+    row = db.execute(
+        select(Practitioner).where(Practitioner.user_id == user_id)
+    ).scalar_one_or_none()
+    if row is None or not row.is_active:
+        raise ForbiddenError("no practitioner profile for this user")
+    return row
 
 
 def set_session_cookies(

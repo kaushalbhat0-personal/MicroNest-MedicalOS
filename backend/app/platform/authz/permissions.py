@@ -37,6 +37,8 @@ class P:
     ENCOUNTER_READ = "encounter.read"
     CLINICAL_READ = "clinical.read"
     CLINICAL_CREATE = "clinical.create"
+    PRESCRIPTION_READ = "prescription.read"
+    PRESCRIPTION_CREATE = "prescription.create"
     PRESCRIPTION_SIGN = "prescription.sign"
     DENTAL_READ = "dental.read"
     DENTAL_RECORD = "dental.record"
@@ -52,6 +54,23 @@ class P:
     BRANDING_MANAGE = "branding.manage"
     REPORTS_VIEW = "reports.view"
     REPORTS_EXPORT = "reports.export"
+
+
+CLINICAL_ADMIN = frozenset(
+    {
+        P.ENCOUNTER_OPEN,
+        P.ENCOUNTER_CLOSE,
+        P.ENCOUNTER_READ,
+        P.CLINICAL_READ,
+        P.CLINICAL_CREATE,
+        P.PRESCRIPTION_READ,
+        P.PRESCRIPTION_CREATE,
+        P.PRESCRIPTION_SIGN,
+        P.DENTAL_READ,
+        P.DENTAL_RECORD,
+        P.PLAN_MANAGE,
+    }
+)
 
 
 # Seed role bundles. Tenant admins may define custom roles (subset only —
@@ -74,9 +93,12 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.APPOINTMENT_UPDATE,
             P.PATIENT_READ,
             P.PATIENT_CREATE,
+            *CLINICAL_ADMIN,
         }
     ),
-    "doctor": frozenset({P.TENANT_READ, P.APPOINTMENT_READ, P.APPOINTMENT_UPDATE, P.PATIENT_READ}),
+    "doctor": frozenset(
+        {P.TENANT_READ, P.APPOINTMENT_READ, P.APPOINTMENT_UPDATE, P.PATIENT_READ, *CLINICAL_ADMIN}
+    ),
     "receptionist": frozenset(
         {
             P.TENANT_READ,
@@ -85,9 +107,20 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.APPOINTMENT_UPDATE,
             P.PATIENT_READ,
             P.PATIENT_CREATE,
+            P.ENCOUNTER_OPEN,
+            P.ENCOUNTER_READ,
         }
     ),
-    "nurse": frozenset({P.TENANT_READ, P.APPOINTMENT_READ, P.PATIENT_READ}),
+    "nurse": frozenset(
+        {
+            P.TENANT_READ,
+            P.APPOINTMENT_READ,
+            P.PATIENT_READ,
+            P.ENCOUNTER_READ,
+            P.CLINICAL_READ,
+            P.CLINICAL_CREATE,
+        }
+    ),
     "accountant": frozenset({P.TENANT_READ}),
     "staff": frozenset({P.TENANT_READ}),
     "patient": frozenset(),

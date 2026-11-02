@@ -36,6 +36,7 @@ export default function SessionsPage() {
         <Link href="/team">Team</Link>
         <Link href="/sessions">Sessions</Link>
         <Link href="/schedule">Schedule</Link>
+        <Link href="/encounters">Encounters</Link>
       </nav>
       <div className="card">
         <h1>Sessions</h1>

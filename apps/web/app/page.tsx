@@ -42,6 +42,7 @@ export default function HomePage() {
         <Link href="/team">Team</Link>
         <Link href="/sessions">Sessions</Link>
         <Link href="/schedule">Schedule</Link>
+        <Link href="/encounters">Encounters</Link>
       </nav>
       <div className="card">
         <h1>Welcome, {me.display_name}</h1>
