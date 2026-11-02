@@ -1,0 +1,22 @@
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "DTZ"]
+ignore = ["S101"]
+[tool.ruff.lint.flake8-bandit]
+hardcoded-password-string = ["password", "passwd", "pwd", "secret", "token"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_return_any = true
+plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/platform/ops.py"]
+[tool.coverage.report]
+fail_under = 70
