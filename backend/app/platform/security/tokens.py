@@ -3,10 +3,11 @@
 Refresh tokens are stored ONLY as SHA-256 hashes. Reuse of a rotated token
 revokes the whole session family (theft detection).
 """
+
 import hashlib
 import secrets
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import jwt
 

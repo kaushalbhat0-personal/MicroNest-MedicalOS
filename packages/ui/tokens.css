@@ -1,0 +1,12 @@
+/* Healthcare OS design tokens (primitive layer). P1: palette + radii only.
+   Full semantic/component layers land with the P5 design-system build. */
+:root {
+  --hos-bg: #f8fafc;
+  --hos-fg: #0f172a;
+  --hos-muted: #64748b;
+  --hos-card: #ffffff;
+  --hos-border: #e2e8f0;
+  --hos-primary: #2563eb;
+  --hos-danger: #dc2626;
+  --hos-radius: 12px;
+}

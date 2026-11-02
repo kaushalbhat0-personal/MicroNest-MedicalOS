@@ -1,5 +1,6 @@
 """Auth cookies. Browser auth uses HttpOnly cookies; Bearer header is accepted
 as a fallback for future native clients (same verification, same scope)."""
+
 from fastapi import Response
 
 ACCESS_COOKIE = "hos_access"

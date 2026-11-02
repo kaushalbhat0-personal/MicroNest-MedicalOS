@@ -5,6 +5,7 @@ Per-session: fresh schema + alembic upgrade head on the TEST database.
 Per-test: TRUNCATE ... CASCADE for isolation.
 The API runs through the app-role factory so RLS is genuinely exercised.
 """
+
 import os
 import uuid
 from collections.abc import Iterator
@@ -35,10 +36,21 @@ from app.platform import db as dbmod  # noqa: E402
 from app.platform.ratelimit import limiter  # noqa: E402
 
 ALL_TABLES = [
-    "audit_events", "auth_events", "credentials", "invitations", "locations",
-    "membership_locations", "memberships", "outbox_events", "password_resets",
-    "practitioner_verifications", "practitioners", "roles", "sessions",
-    "tenants", "users",
+    "audit_events",
+    "auth_events",
+    "credentials",
+    "invitations",
+    "locations",
+    "membership_locations",
+    "memberships",
+    "outbox_events",
+    "password_resets",
+    "practitioner_verifications",
+    "practitioners",
+    "roles",
+    "sessions",
+    "tenants",
+    "users",
 ]
 
 
@@ -48,15 +60,32 @@ def _owner_factory():  # type: ignore[no-untyped-def]
 
 @pytest.fixture(scope="session")
 def migrated_db() -> Iterator[None]:
-    from alembic import command
-    from alembic.config import Config
+    from sqlalchemy import create_engine, text
 
     previous = os.environ.get("OWNER_DATABASE_URL")
     os.environ["OWNER_DATABASE_URL"] = TEST_OWNER_URL
     try:
+        engine = create_engine(TEST_OWNER_URL)
+        with engine.begin() as conn:
+            conn.execute(text("DROP SCHEMA public CASCADE"))
+            conn.execute(text("CREATE SCHEMA public"))
+            conn.execute(text("GRANT ALL ON SCHEMA public TO hos_owner"))
+        engine.dispose()
+        from alembic import command
+        from alembic.config import Config
+
         cfg = Config("backend/alembic.ini")
-        command.downgrade(cfg, "base")
         command.upgrade(cfg, "head")
+        # Migration 0005 creates hos_app NOLOGIN (no secrets in migrations).
+        # Tests and dev enable login with the environment password here —
+        # the single place credentials meet the role (CI supplies its own).
+        app_pw = os.environ.get("TEST_APP_ROLE_PASSWORD", "change-me-app-role")
+        engine2 = create_engine(TEST_OWNER_URL, isolation_level="AUTOCOMMIT")
+        with engine2.begin() as conn:
+            conn.execute(
+                text("ALTER ROLE hos_app WITH LOGIN PASSWORD :pwd"), {"pwd": app_pw}
+            )
+        engine2.dispose()
     finally:
         if previous is None:
             del os.environ["OWNER_DATABASE_URL"]
@@ -119,7 +148,9 @@ def client(app_factory, owner_db):  # type: ignore[no-untyped-def]
 def make_owner_user(owner_db):  # type: ignore[no-untyped-def]
     n = {"i": 0}
 
-    def _make(*, email: str | None = None, password: str = "password-12345-abc") -> object:
+    def _make(
+        *, email: str | None = None, password: str = "password-12345-abc"
+    ) -> object:
         n["i"] += 1
         user = identity_service.create_user(
             owner_db,
@@ -142,18 +173,3 @@ def make_tenant(owner_db):  # type: ignore[no-untyped-def]
         return tenant
 
     return _make
-
-
-@pytest.fixture()
-def login_as():  # type: ignore[no-untyped-def]
-    """Log a user in on a FRESH client (isolated cookie jar)."""
-
-    def _login(client: TestClient, *, email: str, password: str = "password-12345-abc") -> TestClient:
-        from fastapi.testclient import TestClient as TC
-
-        fresh = TC(client.app, base_url="http://test")
-        resp = fresh.post("/api/v1/auth/login", json={"email": email, "password": password})
-        assert resp.status_code == 200, resp.text
-        return fresh
-
-    return _login

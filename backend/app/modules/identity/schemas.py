@@ -1,11 +1,14 @@
 """Identity schemas. Responses never contain hashes, secrets, or tokens
 (tokens travel in HttpOnly cookies only)."""
+
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
+
+from app.platform.security.passwords import MIN_PASSWORD_LENGTH
 
 
 class LoginRequest(BaseModel):
@@ -52,7 +55,7 @@ class InviteCreateResponse(BaseModel):
 class InviteAcceptRequest(BaseModel):
     token: str
     display_name: str
-    password: str = Field(min_length=12)
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH)
 
 
 class PasswordResetRequest(BaseModel):
@@ -61,4 +64,4 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetConfirm(BaseModel):
     token: str
-    new_password: str = Field(min_length=12)
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH)

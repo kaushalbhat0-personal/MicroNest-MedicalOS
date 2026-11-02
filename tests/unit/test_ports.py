@@ -1,4 +1,5 @@
 """Ports: signed access semantics, dev-adapter fail-closed, payload guards."""
+
 import pytest
 
 from app.platform.adapters.dev_adapters import DevNotifyAdapter, LocalStorageAdapter
@@ -36,8 +37,11 @@ def test_storage_rejects_path_traversal(tmp_path) -> None:  # type: ignore[no-un
 
 def test_dev_notify_refuses_prod() -> None:
     settings = Settings(
-        OWNER_DATABASE_URL="x", APP_DATABASE_URL="x", JWT_SECRET="s" * 32,
-        ENV="prod", DEV_NOTIFICATIONS_ALLOW=False,
+        OWNER_DATABASE_URL="x",
+        APP_DATABASE_URL="x",
+        JWT_SECRET="s" * 32,
+        ENV="prod",
+        DEV_NOTIFICATIONS_ALLOW=False,
     )
     with pytest.raises(RuntimeError):
         DevNotifyAdapter(settings)
@@ -45,14 +49,22 @@ def test_dev_notify_refuses_prod() -> None:
 
 def test_dev_notify_health_is_false(tmp_path) -> None:  # type: ignore[no-untyped-def]
     settings = Settings(
-        OWNER_DATABASE_URL="x", APP_DATABASE_URL="x", JWT_SECRET="s" * 32,
-        ENV="dev", DEV_NOTIFICATIONS_ALLOW=True,
+        OWNER_DATABASE_URL="x",
+        APP_DATABASE_URL="x",
+        JWT_SECRET="s" * 32,
+        ENV="dev",
+        DEV_NOTIFICATIONS_ALLOW=True,
     )
     adapter = DevNotifyAdapter(settings)
     assert adapter.health() is False
     result = adapter.send(
-        NotifyRequest(channel="email", to_ref="user-id", template="t",
-                      locale="en", context_refs={})
+        NotifyRequest(
+            channel="email",
+            to_ref="user-id",
+            template="t",
+            locale="en",
+            context_refs={},
+        )
     )
     assert result.accepted
 

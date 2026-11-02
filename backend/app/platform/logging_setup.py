@@ -6,6 +6,7 @@ Tests assert that passwords, tokens, OTPs, and clinical payload keys never
 survive. When in doubt, add the key to SENSITIVE_KEYS — over-redaction of
 debug logs is acceptable, under-redaction is a release blocker.
 """
+
 import copy
 import logging
 import re
@@ -57,11 +58,11 @@ def scrub(obj: Any) -> Any:
             else:
                 out[k] = scrub(v)
         return out
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list | tuple):
         return [scrub(v) for v in obj]
     if isinstance(obj, str):
         return _TOKEN_RE.sub("[REDACTED-TOKEN]", obj)
-    return copy.deepcopy(obj) if isinstance(obj, (dict, list)) else obj
+    return copy.deepcopy(obj) if isinstance(obj, dict | list) else obj
 
 
 class ScrubbingFilter(logging.Filter):
@@ -85,13 +86,28 @@ def get_logger(name: str) -> logging.Logger:
     return logger
 
 
+class RequestIDFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        from app.platform.request_context import request_id_ctx
+
+        record.request_id = request_id_ctx.get()
+        return True
+
+
 def configure_root_logging(level: int = logging.INFO) -> None:
     root = logging.getLogger()
     if not root.handlers:
-        logging.basicConfig(
-            level=level,
-            format="%(asctime)s %(levelname)s [%(name)s] request_id=%(request_id)s %(message)s",
-            defaults={"request_id": "-"},
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)s [%(name)s] request_id=%(request_id)s %(message)s"
+            )
         )
+        handler.addFilter(RequestIDFilter())
+        handler.addFilter(ScrubbingFilter())
+        root.addHandler(handler)
+        root.setLevel(level)
+    if not any(isinstance(f, RequestIDFilter) for f in root.filters):
+        root.addFilter(RequestIDFilter())
     if not any(isinstance(f, ScrubbingFilter) for f in root.filters):
         root.addFilter(ScrubbingFilter())

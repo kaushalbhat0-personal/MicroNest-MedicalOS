@@ -3,13 +3,15 @@
 Revision ID: 0002_tenancy
 Revises: 0001_identity
 """
+
+import json
 from collections.abc import Sequence
 from datetime import datetime, timezone
-import json
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "0002_tenancy"
 down_revision: str | Sequence[str] | None = "0001_identity"
@@ -21,8 +23,13 @@ UTC = timezone.utc
 SEED_ROLES = {
     "platform_admin": ["platform.tenant.create", "platform.tenant.suspend", "platform.health"],
     "tenant_admin": [
-        "tenant.read", "settings.manage", "staff.invite", "staff.manage",
-        "roles.manage", "locations.manage", "audit.read",
+        "tenant.read",
+        "settings.manage",
+        "staff.invite",
+        "staff.manage",
+        "roles.manage",
+        "locations.manage",
+        "audit.read",
     ],
     "doctor": ["tenant.read"],
     "receptionist": ["tenant.read"],
@@ -121,7 +128,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(sa.text("DELETE FROM roles WHERE tenant_id IS NULL"))
     op.drop_table("practitioner_verifications")
     op.drop_table("invitations")
     op.drop_table("memberships")

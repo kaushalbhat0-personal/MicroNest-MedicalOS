@@ -1,4 +1,5 @@
 """Audit schemas. Reads are scoped to the caller's tenant."""
+
 from __future__ import annotations
 
 import uuid

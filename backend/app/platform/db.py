@@ -6,6 +6,7 @@ Two URLs by design:
 
 The app NEVER migrates at startup. Migrations are explicit jobs (alembic CLI / CI).
 """
+
 import contextvars
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -16,12 +17,8 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 # Server-side request scope. Set per request inside a transaction; consumed by
 # the RLS helper below. Never populated from client input without validation
 # (see platform/authz/scope.py which resolves memberships first).
-tenant_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "tenant_ctx", default=None
-)
-actor_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "actor_ctx", default=None
-)
+tenant_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar("tenant_ctx", default=None)
+actor_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar("actor_ctx", default=None)
 
 
 class Base(DeclarativeBase):
@@ -30,7 +27,9 @@ class Base(DeclarativeBase):
 
 def make_session_factory(db_url: str) -> sessionmaker[Session]:
     engine = create_engine(db_url, pool_pre_ping=True, future=True)
-    return sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, class_=Session)
+    # autoflush ON (standard): reads in a transaction must see the
+    # transaction's own writes (services rely on this).
+    return sessionmaker(bind=engine, autoflush=True, expire_on_commit=False, class_=Session)
 
 
 @contextmanager

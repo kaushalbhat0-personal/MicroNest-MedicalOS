@@ -1,6 +1,7 @@
 """Identity models: who can authenticate. No tenant_id here by design —
 tenant attachment lives ONLY in tenancy.Membership.
 """
+
 from __future__ import annotations
 
 import uuid

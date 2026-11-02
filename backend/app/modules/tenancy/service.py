@@ -2,6 +2,7 @@
 location scope, invitations, practitioner verification. All writes validate
 scope server-side; client-sent tenant IDs are selectors only.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -24,7 +25,7 @@ from app.modules.tenancy.models import (
     Verification,
 )
 from app.platform import ids
-from app.platform.authz.permissions import PLATFORM_ONLY, SEED_ROLES, validate_custom_role
+from app.platform.authz.permissions import PLATFORM_ONLY, P, validate_custom_role
 from app.platform.errors import ConflictError, ForbiddenError, GoneError, NotFoundError
 from app.platform.time import UTC
 
@@ -36,16 +37,18 @@ def _now() -> datetime:
 # --- Tenants (platform) ---
 
 
-def create_tenant(
-    db: DBSession, *, name: str, slug: str, actor: User | None = None
-) -> Tenant:
+def create_tenant(db: DBSession, *, name: str, slug: str, actor: User | None = None) -> Tenant:
     slug_n = slug.strip().lower()
     if db.execute(select(Tenant).where(Tenant.slug == slug_n)).scalar_one_or_none():
         raise ConflictError("tenant slug already exists")
     now = _now()
     tenant = Tenant(
-        id=ids.uuid7(), name=name, slug=slug_n, status=TENANT_ACTIVE,
-        created_at=now, updated_at=now,
+        id=ids.uuid7(),
+        name=name,
+        slug=slug_n,
+        status=TENANT_ACTIVE,
+        created_at=now,
+        updated_at=now,
     )
     db.add(tenant)
     db.flush()
@@ -80,16 +83,14 @@ def get_seed_role(db: DBSession, name: str) -> Role:
 def user_memberships(db: DBSession, user_id: uuid.UUID) -> list[Membership]:
     return list(
         db.execute(
-            select(Membership).where(
-                Membership.user_id == user_id, Membership.is_active.is_(True)
-            )
-        ).scalars().all()
+            select(Membership).where(Membership.user_id == user_id, Membership.is_active.is_(True))
+        )
+        .scalars()
+        .all()
     )
 
 
-def get_membership(
-    db: DBSession, *, user_id: uuid.UUID, tenant_id: uuid.UUID
-) -> Membership:
+def get_membership(db: DBSession, *, user_id: uuid.UUID, tenant_id: uuid.UUID) -> Membership:
     m = db.execute(
         select(Membership).where(
             Membership.user_id == user_id,
@@ -123,16 +124,20 @@ def create_membership(
     if role.tenant_id is not None and role.tenant_id != tenant.id:
         raise ForbiddenError("role belongs to another tenant")
     existing = db.execute(
-        select(Membership).where(
-            Membership.user_id == user.id, Membership.tenant_id == tenant.id
-        )
+        select(Membership).where(Membership.user_id == user.id, Membership.tenant_id == tenant.id)
     ).scalar_one_or_none()
     if existing is not None:
         raise ConflictError("membership already exists")
     now = _now()
     m = Membership(
-        id=ids.uuid7(), user_id=user.id, tenant_id=tenant.id, role_id=role.id,
-        is_active=True, is_primary=is_primary, created_at=now, updated_at=now,
+        id=ids.uuid7(),
+        user_id=user.id,
+        tenant_id=tenant.id,
+        role_id=role.id,
+        is_active=True,
+        is_primary=is_primary,
+        created_at=now,
+        updated_at=now,
     )
     db.add(m)
     db.flush()
@@ -141,9 +146,7 @@ def create_membership(
     return m
 
 
-def create_custom_role(
-    db: DBSession, *, tenant: Tenant, name: str, permissions: list[str]
-) -> Role:
+def create_custom_role(db: DBSession, *, tenant: Tenant, name: str, permissions: list[str]) -> Role:
     validate_custom_role(permissions)
     if set(permissions) & PLATFORM_ONLY:
         raise ForbiddenError("platform permissions cannot be granted to tenants")
@@ -152,8 +155,12 @@ def create_custom_role(
     ).scalar_one_or_none():
         raise ConflictError("role name already exists in tenant")
     role = Role(
-        id=ids.uuid7(), tenant_id=tenant.id, name=name,
-        permissions=sorted(set(permissions)), is_seed=False, created_at=_now(),
+        id=ids.uuid7(),
+        tenant_id=tenant.id,
+        name=name,
+        permissions=sorted(set(permissions)),
+        is_seed=False,
+        created_at=_now(),
     )
     db.add(role)
     return role
@@ -191,13 +198,32 @@ def create_invitation(
     return inv, raw
 
 
+def find_invitation_tenant_id(db: DBSession, *, token: str) -> uuid.UUID:
+    """Resolve the tenant for a token WITHOUT trusting client input.
+
+    The invitations table is RLS-exempt (capability-gated by 256-bit token
+    hash); the returned tenant id is server-derived and used to scope the
+    accept transaction. Raises GoneError for unknown/expired tokens (no oracle
+    either way: validity and expiry are indistinguishable).
+    """
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    tenant_id = db.execute(
+        select(Invitation.tenant_id).where(
+            Invitation.token_hash == digest,
+            Invitation.status == "pending",
+            Invitation.expires_at > _now(),
+        )
+    ).scalar_one_or_none()
+    if tenant_id is None:
+        raise GoneError("invitation invalid or expired")
+    return tenant_id
+
+
 def accept_invitation(
     db: DBSession, *, token: str, display_name: str, password: str
 ) -> tuple[User, Membership]:
     digest = hashlib.sha256(token.encode()).hexdigest()
-    inv = db.execute(
-        select(Invitation).where(Invitation.token_hash == digest)
-    ).scalar_one_or_none()
+    inv = db.execute(select(Invitation).where(Invitation.token_hash == digest)).scalar_one_or_none()
     if inv is None or inv.status != "pending" or inv.expires_at <= _now():
         raise GoneError("invitation invalid or expired")
     tenant = get_tenant(db, inv.tenant_id)
@@ -264,10 +290,14 @@ def set_verification(
     now = _now()
     if v is None:
         v = Verification(
-            id=ids.uuid7(), tenant_id=tenant.id,
-            practitioner_id=practitioner.id, status=status,
-            reviewer_id=reviewer.id if reviewer else None, reason=reason,
-            created_at=now, updated_at=now,
+            id=ids.uuid7(),
+            tenant_id=tenant.id,
+            practitioner_id=practitioner.id,
+            status=status,
+            reviewer_id=reviewer.id if reviewer else None,
+            reason=reason,
+            created_at=now,
+            updated_at=now,
         )
         db.add(v)
     else:
@@ -291,8 +321,6 @@ def is_practitioner_verified(
 
 
 def _role_has_staff_manage(role: Role) -> bool:
-    from app.platform.authz.permissions import P
-
     return P.STAFF_MANAGE in set(role.permissions or [])
 
 
@@ -317,7 +345,9 @@ def update_membership(
         current_role = db.get(Role, membership.role_id)
         if current_role is not None and _role_has_staff_manage(current_role):
             others = db.execute(
-                select(Membership, Role).join(Role, Membership.role_id == Role.id).where(
+                select(Membership, Role)
+                .join(Role, Membership.role_id == Role.id)
+                .where(
                     Membership.tenant_id == membership.tenant_id,
                     Membership.id != membership.id,
                     Membership.is_active.is_(True),
@@ -329,6 +359,8 @@ def update_membership(
     membership.is_active = target_active
     membership.updated_at = _now()
     if location_ids is not None:
+        from sqlalchemy import delete as sa_delete
+
         from app.modules.clinics.models import Location
         from app.modules.tenancy.models import MembershipLocation as ML
 
@@ -336,9 +368,7 @@ def update_membership(
             loc = db.get(Location, loc_id)
             if loc is None or loc.tenant_id != membership.tenant_id:
                 raise ForbiddenError("location is outside this tenant")
-        db.execute(
-            ML.__table__.delete().where(ML.membership_id == membership.id)  # type: ignore[arg-type]
-        )
+        db.execute(sa_delete(ML).where(ML.membership_id == membership.id))
         for loc_id in location_ids:
             db.add(ML(membership_id=membership.id, location_id=loc_id))
     return membership

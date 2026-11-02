@@ -1,13 +1,26 @@
 """Permission catalog: platform-defined, bundles valid, custom-role rules."""
+
 import pytest
 
-from app.platform.authz.permissions import P, PLATFORM_ONLY, SEED_ROLES, validate_custom_role
+from app.platform.errors import ValidationError
+
+from app.platform.authz.permissions import (
+    P,
+    PLATFORM_ONLY,
+    SEED_ROLES,
+    validate_custom_role,
+)
 
 
 def test_catalog_has_p1_permissions() -> None:
     for perm in (
-        P.TENANT_READ, P.STAFF_INVITE, P.STAFF_MANAGE, P.ROLES_MANAGE,
-        P.LOCATIONS_MANAGE, P.AUDIT_READ, P.PLATFORM_TENANT_CREATE,
+        P.TENANT_READ,
+        P.STAFF_INVITE,
+        P.STAFF_MANAGE,
+        P.ROLES_MANAGE,
+        P.LOCATIONS_MANAGE,
+        P.AUDIT_READ,
+        P.PLATFORM_TENANT_CREATE,
     ):
         assert isinstance(perm, str) and "." in perm
 
@@ -20,12 +33,12 @@ def test_seed_roles_reference_known_permissions() -> None:
 
 
 def test_custom_role_rejects_unknown() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         validate_custom_role(["clinic.fly"])
 
 
 def test_custom_role_rejects_platform_only() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         validate_custom_role([P.PLATFORM_TENANT_CREATE])
 
 

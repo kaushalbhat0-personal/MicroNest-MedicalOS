@@ -1,6 +1,7 @@
 """Notifications P1: request API over the outbox. No templates, no provider
 fan-out yet (P5). Payloads carry references only — enforced by assert_port_safe.
 """
+
 from __future__ import annotations
 
 import uuid

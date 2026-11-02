@@ -1,5 +1,6 @@
 """Clinics service: locations within a tenant. P2+ anchors rooms, chairs,
 and queue tokens here (ADR-023)."""
+
 from __future__ import annotations
 
 import uuid
@@ -28,8 +29,13 @@ def create_location(
         raise ConflictError("location name already exists in tenant")
     now = _now()
     loc = Location(
-        id=ids.uuid7(), tenant_id=tenant.id, name=name, timezone=timezone,
-        is_active=True, created_at=now, updated_at=now,
+        id=ids.uuid7(),
+        tenant_id=tenant.id,
+        name=name,
+        timezone=timezone,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
     )
     db.add(loc)
     return loc
@@ -37,9 +43,9 @@ def create_location(
 
 def list_locations(db: DBSession, *, tenant_id: uuid.UUID) -> list[Location]:
     return list(
-        db.execute(
-            select(Location).where(Location.tenant_id == tenant_id).order_by(Location.name)
-        ).scalars().all()
+        db.execute(select(Location).where(Location.tenant_id == tenant_id).order_by(Location.name))
+        .scalars()
+        .all()
     )
 
 

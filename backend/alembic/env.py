@@ -1,14 +1,15 @@
 """Alembic environment. Explicit migration jobs only — the application
 never calls this at startup (there is no hook from app.main).
 """
+
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from alembic import context
 from sqlalchemy import create_engine
 
+from alembic import context
 from app.modules.audit.models import AuditEvent  # noqa: F401
 from app.modules.clinics.models import Location  # noqa: F401
 from app.modules.identity.models import (  # noqa: F401
@@ -45,7 +46,9 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=get_url(), target_metadata=target_metadata, literal_binds=True,
+        url=get_url(),
+        target_metadata=target_metadata,
+        literal_binds=True,
         compare_type=True,
     )
     with context.begin_transaction():

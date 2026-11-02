@@ -1,5 +1,6 @@
 """Clinic sites. A Location belongs to exactly one tenant. Queue tokens,
 rooms, and day-scoped operations anchor here in P2+ (ADR-023)."""
+
 from __future__ import annotations
 
 import uuid

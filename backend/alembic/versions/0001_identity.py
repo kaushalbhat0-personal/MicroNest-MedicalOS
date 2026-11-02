@@ -3,11 +3,13 @@
 Revision ID: 0001_identity
 Revises: None
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "0001_identity"
 down_revision: str | Sequence[str] | None = None

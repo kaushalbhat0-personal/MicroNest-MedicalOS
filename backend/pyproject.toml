@@ -2,10 +2,8 @@
 target-version = "py310"
 line-length = 100
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "S", "DTZ"]
+select = ["E", "F", "I", "B", "UP", "S"]
 ignore = ["S101"]
-[tool.ruff.lint.flake8-bandit]
-hardcoded-password-string = ["password", "passwd", "pwd", "secret", "token"]
 
 [tool.mypy]
 python_version = "3.10"

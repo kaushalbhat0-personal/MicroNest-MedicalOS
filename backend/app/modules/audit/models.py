@@ -2,12 +2,13 @@
 granted INSERT+SELECT only — UPDATE/DELETE are revoked in migrations and
 asserted by tests. Clinical/PHI payloads are NEVER stored here: refs only.
 """
+
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, Index, String, Text
+from sqlalchemy import TIMESTAMP, BigInteger, Identity, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,8 +35,13 @@ class AuditEvent(Base):
     chain_day: Mapped[str] = mapped_column(String(10), nullable=False)
     prev_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Strictly monotonic insertion order. UUIDv7 ids are NOT monotonic within
+    # the same timestamp (random suffix), and occurred_at can tie under
+    # coarse clocks — ordering the chain by (occurred_at, id) is racy.
+    seq: Mapped[int] = mapped_column(BigInteger, Identity(always=True), nullable=False)
 
     __table_args__ = (
         Index("ix_audit_tenant_day", "tenant_id", "chain_day"),
+        Index("ix_audit_tenant_day_seq", "tenant_id", "chain_day", "seq"),
         Index("ix_audit_resource", "tenant_id", "resource_type", "resource_id"),
     )

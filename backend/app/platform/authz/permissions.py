@@ -6,6 +6,8 @@ Constitution: no `if user.role == "admin"` scattered in code. Every protected
 endpoint declares `require("<permission>")`.
 """
 
+from app.platform.errors import ValidationError
+
 
 class P:
     # P1: platform / tenant administration
@@ -86,6 +88,6 @@ PLATFORM_ONLY = frozenset(
 def validate_custom_role(permissions: list[str]) -> None:
     unknown = set(permissions) - {v for v in vars(P).values() if isinstance(v, str)}
     if unknown:
-        raise ValueError(f"unknown permissions: {sorted(unknown)}")
+        raise ValidationError(f"unknown permissions: {sorted(unknown)}")
     if set(permissions) & PLATFORM_ONLY:
-        raise ValueError("custom roles cannot include platform permissions")
+        raise ValidationError("custom roles cannot include platform permissions")

@@ -1,4 +1,5 @@
 """Log scrubbing: sensitive keys and token shapes never survive."""
+
 import logging
 
 from app.platform.logging_setup import SENSITIVE_KEYS, get_logger, scrub
@@ -6,8 +7,14 @@ from app.platform.logging_setup import SENSITIVE_KEYS, get_logger, scrub
 
 def test_expected_keys_covered() -> None:
     for key in (
-        "password", "token", "refresh_token", "otp", "secret",
-        "clinical_note", "diagnosis", "prescription",
+        "password",
+        "token",
+        "refresh_token",
+        "otp",
+        "secret",
+        "clinical_note",
+        "diagnosis",
+        "prescription",
     ):
         assert key in SENSITIVE_KEYS
 

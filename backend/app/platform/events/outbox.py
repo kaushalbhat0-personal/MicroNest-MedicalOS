@@ -5,12 +5,13 @@ with bounded backoff, and parks poison events in dead-letter.
 
 Only domain-meaningful events (see P0.5 §29). No CRUD-for-everything.
 """
+
 from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import JSON, TIMESTAMP, BigInteger, ForeignKey, Index, String, Text
+from sqlalchemy import JSON, TIMESTAMP, BigInteger, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 

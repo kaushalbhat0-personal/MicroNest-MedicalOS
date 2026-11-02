@@ -1,0 +1,15 @@
+{
+  "name": "healthcare-os",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "web:dev": "npm run dev -w @healthcare-os/web",
+    "web:build": "npm run build -w @healthcare-os/web",
+    "web:typecheck": "npm run typecheck -w @healthcare-os/web",
+    "ui:typecheck": "npm run typecheck -w @healthcare-os/ui"
+  }
+}

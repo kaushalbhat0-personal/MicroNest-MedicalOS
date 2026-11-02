@@ -2,6 +2,7 @@
 SELECTORS ONLY: every field here is resolved from server-side state
 (session -> user -> memberships) and re-validated per request.
 """
+
 import uuid
 from dataclasses import dataclass, field
 

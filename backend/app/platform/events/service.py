@@ -1,11 +1,12 @@
 """Outbox service (emit within caller txn) + minimal worker (claim/process)."""
+
 from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.platform import ids
@@ -56,14 +57,16 @@ def emit(
 
 
 def claim_batch(session: Session, *, limit: int = 25) -> list[OutboxEvent]:
-    now = datetime.now(UTC)
+    # Clock boundary evaluated in the DATABASE (statement timestamp): the app
+    # host and DB host clocks must never be compared across this boundary.
+    # (A Python-side `now` caused missed claims under coarse timer granularity.)
     rows = (
         session.execute(
             select(OutboxEvent)
             .where(
                 OutboxEvent.status.in_([PENDING, FAILED]),
                 (OutboxEvent.next_attempt_at.is_(None))
-                | (OutboxEvent.next_attempt_at <= now),
+                | (OutboxEvent.next_attempt_at <= func.now()),
             )
             .order_by(OutboxEvent.occurred_at)
             .limit(limit)
@@ -95,7 +98,7 @@ def process_batch(
             if event.attempts >= MAX_ATTEMPTS:
                 event.status = DEAD
                 done["dead"] += 1
-                log.warning("outbox event dead", extra={"args": {"event_id": str(event.id)}})
+                log.warning("outbox event dead: %s", event.id)
             else:
                 event.status = FAILED
                 event.next_attempt_at = datetime.now(UTC) + backoff_for_attempt(event.attempts)

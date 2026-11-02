@@ -1,13 +1,16 @@
 """Password hashing. Argon2id exclusively (constitution). No bcrypt fallback."""
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+
+MIN_PASSWORD_LENGTH = 12
 
 _ph = PasswordHasher()
 
 
 def hash_password(password: str) -> str:
-    if not password or len(password) < 12:
-        raise ValueError("password must be at least 12 characters")
+    if not password or len(password) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"password must be at least {MIN_PASSWORD_LENGTH} characters")
     return _ph.hash(password)
 
 

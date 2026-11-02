@@ -2,9 +2,11 @@
 gates. This is the ONLY place tenant scope is derived — endpoints receive a
 resolved RequestContext and never touch raw tenant inputs.
 """
+
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from functools import lru_cache
 
 import jwt
@@ -25,6 +27,7 @@ from app.platform.errors import AuthError, ForbiddenError
 from app.platform.request_context import request_id_ctx
 from app.platform.security import cookies as cookie_util
 from app.platform.security import tokens as token_util
+from app.platform.time import UTC
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -97,15 +100,16 @@ def get_current_user(
     row = db.get(SessionRow, session_id)
     if row is None or row.user_id != user_id or row.revoked_at is not None:
         raise AuthError("session revoked")
-    from datetime import datetime
-
-    from app.platform.time import UTC
-
     if row.expires_at <= datetime.now(UTC):
         raise AuthError("session expired")
     user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise AuthError("account inactive")
+    # Actor attribution for RLS: membership reads are allowed for the
+    # authenticated user (tenant writes still need app.tenant_id, set later
+    # by get_ctx after the tenant selector is validated).
+    db.execute(text("SELECT set_config('app.user_id', :a, true)"), {"a": str(user.id)})
+    dbmod.actor_ctx.set(str(user.id))
     return user, row
 
 
@@ -140,14 +144,13 @@ def get_ctx(
     tenant = tenancy_service.get_tenant(db, selected.tenant_id)
     if tenant.status != "active":
         raise ForbiddenError("tenant is not active")
+    # Tenant context BEFORE any tenant-scoped read (RLS fail-closed default).
+    db.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant.id)})
     role = db.get(Role, selected.role_id)
     if role is None:
         raise ForbiddenError("role revoked")
     loc_ids = tenancy_service.membership_location_ids(db, selected.id)
     # Apply RLS context to THIS transaction (SET LOCAL is txn-scoped).
-    db.execute(
-        text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant.id)}
-    )
     db.execute(text("SELECT set_config('app.actor_id', :a, true)"), {"a": str(user.id)})
     dbmod.tenant_ctx.set(str(tenant.id))
     dbmod.actor_ctx.set(str(user.id))

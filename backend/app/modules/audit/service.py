@@ -2,6 +2,7 @@
 audited by the caller (API layer appends `audit.read` — no recursion: the
 read-of-read is recorded as a single entry with resource=audit stream).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -66,7 +67,7 @@ def append(
     last = db.execute(
         select(AuditEvent.event_hash)
         .where(AuditEvent.tenant_id == tenant_id, AuditEvent.chain_day == day)
-        .order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc())
+        .order_by(AuditEvent.seq.desc())
         .limit(1)
     ).scalar_one_or_none()
     prev = last or GENESIS
@@ -88,9 +89,14 @@ def append(
         chain_day=day,
         prev_hash=prev,
         event_hash=_canonical(
-            occurred_at=at, tenant_id=tenant_id, actor_type=actor_type,
-            actor_id=actor_id, action=action, resource_type=resource_type,
-            resource_id=str(resource_id), prev_hash=prev,
+            occurred_at=at,
+            tenant_id=tenant_id,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            action=action,
+            resource_type=resource_type,
+            resource_id=str(resource_id),
+            prev_hash=prev,
         ),
     )
     db.add(event)
@@ -98,19 +104,27 @@ def append(
 
 
 def verify_chain(db: DBSession, *, tenant_id: uuid.UUID, day: str) -> bool:
-    rows = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.tenant_id == tenant_id, AuditEvent.chain_day == day)
-        .order_by(AuditEvent.occurred_at, AuditEvent.id)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.tenant_id == tenant_id, AuditEvent.chain_day == day)
+            .order_by(AuditEvent.seq)
+        )
+        .scalars()
+        .all()
+    )
     prev = GENESIS
     for row in rows:
         if row.prev_hash != prev:
             return False
         if row.event_hash != _canonical(
-            occurred_at=row.occurred_at, tenant_id=row.tenant_id,
-            actor_type=row.actor_type, actor_id=row.actor_id, action=row.action,
-            resource_type=row.resource_type, resource_id=row.resource_id,
+            occurred_at=row.occurred_at,
+            tenant_id=row.tenant_id,
+            actor_type=row.actor_type,
+            actor_id=row.actor_id,
+            action=row.action,
+            resource_type=row.resource_type,
+            resource_id=row.resource_id,
             prev_hash=row.prev_hash,
         ):
             return False

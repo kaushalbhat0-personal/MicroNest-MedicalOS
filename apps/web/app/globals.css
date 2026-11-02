@@ -1,0 +1,41 @@
+@import "@healthcare-os/ui/tokens.css";
+
+/* Palette source of truth: @healthcare-os/ui tokens. Aliases map the app shell. */
+:root {
+  --bg: var(--hos-bg);
+  --fg: var(--hos-fg);
+  --muted: var(--hos-muted);
+  --card: var(--hos-card);
+  --border: var(--hos-border);
+  --primary: var(--hos-primary);
+  --danger: var(--hos-danger);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.container { max-width: 880px; margin: 2rem auto; padding: 0 1rem; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+label { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.9rem; }
+input, select, button {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+button { background: var(--primary); color: #fff; border: none; cursor: pointer; }
+button.secondary { background: #fff; color: var(--fg); border: 1px solid var(--border); }
+.error { color: var(--danger); }
+.muted { color: var(--muted); }
+nav a { margin-right: 1rem; }
+table { width: 100%; border-collapse: collapse; }
+td, th { text-align: left; padding: 0.4rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; }

@@ -1,6 +1,7 @@
 """Platform administration. Metadata only — NEVER clinical access.
 No hidden super-admin bypass exists anywhere in this codebase.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
@@ -36,8 +37,13 @@ def create_tenant(
     # RLS context for this single, service-verified tenant (never client input).
     db.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(t.id)})
     audit_service.append(
-        db, tenant_id=t.id, actor_type="user", actor_id=str(admin.id),
-        action="tenant.create", resource_type="tenant", resource_id=str(t.id),
+        db,
+        tenant_id=t.id,
+        actor_type="user",
+        actor_id=str(admin.id),
+        action="tenant.create",
+        resource_type="tenant",
+        resource_id=str(t.id),
         request_id=request_id_ctx.get(),
     )
     return S.TenantResponse(id=t.id, name=t.name, slug=t.slug, status=t.status)

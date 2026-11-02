@@ -1,4 +1,5 @@
 """UUIDv7: time-ordered UUIDs (RFC 9562 §5.7). Python 3.10 has no uuid7 yet."""
+
 import random
 import time
 import uuid

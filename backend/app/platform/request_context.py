@@ -1,13 +1,12 @@
 """Request correlation: X-Request-ID in/out, contextvar for logs."""
+
 import contextvars
 import uuid
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "request_id", default="-"
-)
+request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):

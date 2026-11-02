@@ -2,6 +2,7 @@
 There is intentionally no users.tenant_id. Location scope is relational
 (membership_locations), never a JSON array.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -131,7 +132,5 @@ class Invitation(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     expires_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
-    accepted_at: Mapped[datetime | None] = mapped_column(
-        TIMESTAMP(timezone=True), nullable=True
-    )
+    accepted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)

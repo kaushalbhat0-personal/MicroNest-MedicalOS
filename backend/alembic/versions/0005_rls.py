@@ -8,9 +8,11 @@ docs/architecture/rls-model.md).
 
 Also revokes UPDATE/DELETE on audit_events from the app role (append-only).
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0005_rls"
@@ -28,11 +30,10 @@ RLS_TABLES = [
     ("memberships", f"tenant_id = {SETTING} OR user_id = {ACTOR}", f"tenant_id = {SETTING}"),
     (
         "membership_locations",
-        f"EXISTS (SELECT 1 FROM memberships m WHERE m.id = membership_id AND m.tenant_id = {SETTING})",  # noqa: E501
-        f"EXISTS (SELECT 1 FROM memberships m WHERE m.id = membership_id AND m.tenant_id = {SETTING})",  # noqa: E501
+        f"EXISTS (SELECT 1 FROM memberships m WHERE m.id = membership_id AND m.tenant_id = {SETTING})",  # noqa: E501, S608
+        f"EXISTS (SELECT 1 FROM memberships m WHERE m.id = membership_id AND m.tenant_id = {SETTING})",  # noqa: E501, S608
     ),
     ("roles", f"tenant_id IS NULL OR tenant_id = {SETTING}", f"tenant_id = {SETTING}"),
-    ("invitations", f"tenant_id = {SETTING}", f"tenant_id = {SETTING}"),
     (
         "practitioner_verifications",
         f"tenant_id = {SETTING}",
@@ -50,6 +51,12 @@ NON_RLS_TABLES = [
     "auth_events",
     "tenants",
     "outbox_events",
+    # invitations: capability-gated, NOT tenant-gated. Reads happen only by
+    # unguessable 256-bit token hash (single-use, expiring); there is no
+    # endpoint that enumerates invitations. Writes on accept are tenant-scoped
+    # by SETTING app.tenant_id to the invitation's own tenant (server-derived
+    # from the token lookup, never client input) before the membership insert.
+    "invitations",
 ]
 
 

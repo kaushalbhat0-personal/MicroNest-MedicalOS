@@ -1,5 +1,6 @@
 """Identity service: users, passwords, sessions, resets. Single source of
 truth for authN rules. No tenant logic here (membership lives in tenancy)."""
+
 from __future__ import annotations
 
 import hashlib
@@ -18,9 +19,9 @@ from app.modules.identity.models import (
     User,
 )
 from app.platform import ids
-from app.platform.time import UTC
 from app.platform.errors import AuthError, ConflictError, GoneError, SessionReuseError
 from app.platform.security import passwords, tokens
+from app.platform.time import UTC
 
 
 def normalize_email(email: str) -> str:
@@ -52,9 +53,7 @@ def record_auth_event(
 
 
 def get_user_by_email(db: DBSession, email: str) -> User | None:
-    return db.execute(
-        select(User).where(User.email == normalize_email(email))
-    ).scalar_one_or_none()
+    return db.execute(select(User).where(User.email == normalize_email(email))).scalar_one_or_none()
 
 
 def create_user(
@@ -82,9 +81,7 @@ def create_user(
 def set_password(db: DBSession, user: User, password: str) -> None:
     hashed = passwords.hash_password(password)
     cred = db.execute(
-        select(Credential).where(
-            Credential.user_id == user.id, Credential.type == "password"
-        )
+        select(Credential).where(Credential.user_id == user.id, Credential.type == "password")
     ).scalar_one_or_none()
     now = _now()
     if cred is None:
@@ -110,9 +107,7 @@ def authenticate(db: DBSession, *, email: str, password: str, ip: str | None) ->
         record_auth_event(db, action="login_failed", user_id=None, ip=ip)
         raise AuthError("invalid credentials")
     cred = db.execute(
-        select(Credential).where(
-            Credential.user_id == user.id, Credential.type == "password"
-        )
+        select(Credential).where(Credential.user_id == user.id, Credential.type == "password")
     ).scalar_one_or_none()
     if cred is None or not passwords.verify_password(password, cred.secret_hash):
         record_auth_event(db, action="login_failed", user_id=user.id, ip=ip)
@@ -154,9 +149,7 @@ def create_session(
 def _revoke_family(
     db: DBSession, family_id: uuid.UUID, *, reason: str, exclude: uuid.UUID | None = None
 ) -> None:
-    rows = db.execute(
-        select(Session).where(Session.family_id == family_id)
-    ).scalars().all()
+    rows = db.execute(select(Session).where(Session.family_id == family_id)).scalars().all()
     now = _now()
     for row in rows:
         if exclude is not None and row.id == exclude:
@@ -182,13 +175,19 @@ def rotate_session(
     if current is None:
         raise AuthError("invalid session")
     if current.refresh_hash != presented_hash:
-        # Is it a rotated (old) secret? Check family for a revoked row mismatch.
+        # Secret does not match this row: possible forgery. If the session
+        # belongs to a family, kill the family — fail closed.
         _revoke_family(db, current.family_id, reason="reuse_detected")
-        record_auth_event(
-            db, action="session_reuse_detected", user_id=current.user_id, ip=ip
-        )
+        record_auth_event(db, action="session_reuse_detected", user_id=current.user_id, ip=ip)
         raise SessionReuseError("session reuse detected; family revoked")
-    if current.revoked_at is not None or current.expires_at <= now:
+    if current.revoked_at is not None:
+        if current.revoked_reason == "rotated":
+            # A rotated secret presented again: the new secret may be stolen.
+            _revoke_family(db, current.family_id, reason="reuse_detected")
+            record_auth_event(db, action="session_reuse_detected", user_id=current.user_id, ip=ip)
+            raise SessionReuseError("session reuse detected; family revoked")
+        raise AuthError("session revoked")
+    if current.expires_at <= now:
         raise AuthError("session expired")
     user = db.get(User, current.user_id)
     if user is None or not user.is_active:
@@ -222,12 +221,12 @@ def revoke_session(db: DBSession, session: Session, *, reason: str = "logout") -
     record_auth_event(db, action="session_revoked", user_id=session.user_id)
 
 
-def revoke_all_user_sessions(
-    db: DBSession, user_id: uuid.UUID, *, reason: str
-) -> int:
-    rows = db.execute(
-        select(Session).where(Session.user_id == user_id, Session.revoked_at.is_(None))
-    ).scalars().all()
+def revoke_all_user_sessions(db: DBSession, user_id: uuid.UUID, *, reason: str) -> int:
+    rows = (
+        db.execute(select(Session).where(Session.user_id == user_id, Session.revoked_at.is_(None)))
+        .scalars()
+        .all()
+    )
     now = _now()
     for row in rows:
         row.revoked_at = now

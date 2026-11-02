@@ -1,0 +1,77 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      OWNER_DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/healthcare_os_test
+      TEST_OWNER_DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/healthcare_os_test
+      TEST_APP_DATABASE_URL: postgresql+psycopg2://hos_app:ci-app-role-pw@localhost:5432/healthcare_os_test
+      TEST_APP_ROLE_PASSWORD: ci-app-role-pw
+      JWT_SECRET: ci-only-secret-min-32-chars-xxxxxxxx
+      ENV: test
+      DEV_NOTIFICATIONS_ALLOW: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install
+        run: python -m pip install -r backend/requirements.txt
+      - name: Prepare database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "CREATE DATABASE healthcare_os_test;" || true
+      - name: Lint
+        run: |
+          python -m ruff check backend tests
+          python -m ruff format --check backend tests
+      - name: Typecheck
+        run: python -m mypy backend/app
+      - name: Tests
+        run: python -m pytest
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No tracked secrets
+        run: |
+          git ls-files | grep -E '(^\.env$|\.pem$|\.key$|\.p12$|/_ref_)' && exit 1 || echo "clean"
+          grep -q change-me .env.example
+      - name: No tokens in browser storage
+        run: |
+          ! grep -rEI "localStorage.*(token|refresh|secret|password)|sessionStorage.*(token|refresh|secret|password)" apps --include='*.ts' --include='*.tsx' || exit 1
+          echo "clean"

@@ -1,6 +1,7 @@
 """Rate limiting. In-memory buckets for P1/dev; the RateLimitPort protocol
 is the seam a Redis adapter will implement (P7). Limits are per (scope, key).
 """
+
 from __future__ import annotations
 
 import time

@@ -6,6 +6,7 @@ without production providers. They are FAIL-CLOSED:
 - LocalStorageAdapter keeps bytes under a gitignored dir and serves them only
   through expiring HMAC-signed references — never raw paths, never public.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -34,9 +35,7 @@ class DevNotifyAdapter:
 
     def __init__(self, settings: Settings) -> None:
         if settings.ENV == "prod" or not settings.DEV_NOTIFICATIONS_ALLOW:
-            raise RuntimeError(
-                "DevNotifyAdapter is development-only and refuses to start here"
-            )
+            raise RuntimeError("DevNotifyAdapter is development-only and refuses to start here")
 
     def health(self) -> bool:
         return False
@@ -44,8 +43,10 @@ class DevNotifyAdapter:
     def send(self, request: NotifyRequest) -> NotifyResult:
         assert_port_safe(dict(request.context_refs))
         # Intentionally console-only; goes through scrubbed logging in the worker.
-        print(f"[DEV-NOTIFY] channel={request.channel} to_ref={request.to_ref} "
-              f"template={request.template}")
+        print(
+            f"[DEV-NOTIFY] channel={request.channel} to_ref={request.to_ref} "
+            f"template={request.template}"
+        )
         return NotifyResult(provider_ref=f"dev-{ids.uuid7()}", accepted=True)
 
 
@@ -88,9 +89,7 @@ class LocalStorageAdapter:
     def signed_access(self, *, key: str, expires_seconds: int) -> str:
         exp = int(time.time()) + expires_seconds
         nonce = uuid.uuid4().hex
-        mac = hmac.new(
-            self._secret, f"{key}:{exp}:{nonce}".encode(), hashlib.sha256
-        ).hexdigest()
+        mac = hmac.new(self._secret, f"{key}:{exp}:{nonce}".encode(), hashlib.sha256).hexdigest()
         return f"stor1.{nonce}.{exp}.{mac}"
 
     def verify_signed_access(self, *, key: str, token: str) -> bool:

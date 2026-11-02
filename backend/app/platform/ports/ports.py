@@ -2,6 +2,7 @@
 adapters (platform/adapters, infrastructure/) implement them. No business
 logic branches on deployment — only adapter selection does.
 """
+
 from __future__ import annotations
 
 import uuid

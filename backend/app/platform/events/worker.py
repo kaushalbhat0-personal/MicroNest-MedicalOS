@@ -3,6 +3,7 @@
 Polls the outbox and dispatches to registered handlers. Handlers are
 registered in app wiring (main.py), never here — this module stays generic.
 """
+
 import time
 
 from app.platform.config import get_settings

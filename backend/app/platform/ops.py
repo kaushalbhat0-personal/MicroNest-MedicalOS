@@ -5,10 +5,10 @@ Usage:
       --tenant-name "Acme Dental" --slug acme-dental --location "Main Clinic"
   python -m app.platform.ops ensure-app-role
 """
+
 from __future__ import annotations
 
 import argparse
-import getpass
 import sys
 
 from sqlalchemy import text
@@ -55,7 +55,20 @@ def cmd_ensure_app_role() -> None:
         raise RuntimeError("APP_ROLE_PASSWORD is not configured")
     factory = _owner_factory()
     with factory() as session:
-        session.execute(text(f"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{APP_ROLE}') THEN CREATE ROLE {APP_ROLE} LOGIN PASSWORD :pwd; END IF; END $$;").bindparams(pwd=settings.APP_ROLE_PASSWORD))  # noqa: E501
+        # Migration 0005 owns role creation (NOLOGIN, no secrets in history).
+        # This job only enables login + ensures grants (idempotent).
+        session.execute(
+            text(
+                "DO $$ BEGIN IF NOT EXISTS "
+                "(SELECT FROM pg_roles WHERE rolname = 'hos_app') "
+                "THEN CREATE ROLE hos_app NOLOGIN; END IF; END $$;"
+            )
+        )
+        session.execute(
+            text("ALTER ROLE hos_app WITH LOGIN PASSWORD :pwd").bindparams(
+                pwd=settings.APP_ROLE_PASSWORD
+            )
+        )
         session.execute(text("GRANT USAGE ON SCHEMA public TO hos_app"))
         for table in APP_TABLES:
             session.execute(text(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO hos_app"))
@@ -79,14 +92,10 @@ def cmd_bootstrap(args: argparse.Namespace) -> None:
                 session, email=email, display_name=args.name or email, password=None
             )
             user.is_platform_admin = True
-            tenant = tenancy_service.create_tenant(
-                session, name=args.tenant_name, slug=args.slug
-            )
+            tenant = tenancy_service.create_tenant(session, name=args.tenant_name, slug=args.slug)
             from app.modules.clinics import service as clinics_service
 
-            clinics_service.create_location(
-                session, tenant=tenant, name=args.location
-            )
+            clinics_service.create_location(session, tenant=tenant, name=args.location)
             role = tenancy_service.get_seed_role(session, "tenant_admin")
             tenancy_service.create_membership(
                 session, user=user, tenant=tenant, role=role, is_primary=True

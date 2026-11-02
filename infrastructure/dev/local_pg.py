@@ -87,6 +87,40 @@ def cmd_status() -> None:
     print(pg.pg_isready(["-h", "127.0.0.1", "-p", PORT], pgdata=None))
 
 
+def cmd_reset() -> None:
+    """Drop + recreate dev databases and re-apply migrations (dev only)."""
+    import psycopg2
+
+    for dbname in ("healthcare_os", "healthcare_os_test"):
+        conn = psycopg2.connect(
+            host="127.0.0.1", port=int(PORT), user=OWNER, password=OWNER_PW, dbname="postgres"
+        )
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = %s AND pid <> pg_backend_pid()",
+            (dbname,),
+        )
+        cur.execute(f'DROP DATABASE IF EXISTS "{dbname}"')
+        cur.execute(f'CREATE DATABASE "{dbname}" OWNER "{OWNER}"')
+        conn.close()
+        print(f"reset database {dbname}")
+    import subprocess
+
+    env = dict(os.environ)
+    env["OWNER_DATABASE_URL"] = (
+        f"postgresql+psycopg2://{OWNER}:{OWNER_PW}@127.0.0.1:{PORT}/healthcare_os"
+    )
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "-c", "backend/alembic.ini", "upgrade", "head"],
+        cwd=str(ROOT),
+        env=env,
+        check=True,
+    )
+    print("migrations applied to healthcare_os")
+
+
 def main(argv: list[str]) -> int:
     cmd = argv[1] if len(argv) > 1 else "status"
     if cmd == "init":
@@ -95,6 +129,8 @@ def main(argv: list[str]) -> int:
         cmd_start()
     elif cmd == "stop":
         cmd_stop()
+    elif cmd == "reset":
+        cmd_reset()
     else:
         cmd_status()
     return 0

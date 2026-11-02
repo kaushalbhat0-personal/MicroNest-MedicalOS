@@ -1,6 +1,7 @@
 """RFC-7807 error envelope. Domain errors map to codes; unexpected errors
 are generic 500s (details in server logs only — never leak internals).
 """
+
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
@@ -14,9 +15,7 @@ from app.platform.request_context import request_id_ctx
 log = get_logger(__name__)
 
 
-def _envelope(
-    *, type: str, title: str, status: int, detail: str
-) -> dict[str, object]:
+def _envelope(*, type: str, title: str, status: int, detail: str) -> dict[str, object]:
     return {
         "type": type,
         "title": title,
@@ -67,3 +66,30 @@ def register_handlers(app: FastAPI) -> None:
     app.add_exception_handler(DomainError, _domain_handler)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, _validation_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, _unexpected_handler)
+
+
+def unauthorized_response(detail: str = "authentication failed") -> JSONResponse:
+    """401 WITHOUT raising: the request transaction commits, preserving
+    security-audit writes (failed logins, reuse detection, revocations).
+    Raising here would roll those back — a security-event loss bug."""
+    return JSONResponse(
+        status_code=401,
+        content=_envelope(
+            type="https://healthcare-os/errors/authentication_failed",
+            title="authentication failed",
+            status=401,
+            detail=detail,
+        ),
+    )
+
+
+# Declared on protected routers so the OpenAPI contract documents the gate.
+# The contract test fails CI if a new protected route omits these.
+AUTHN_RESPONSES: dict[int | str, dict[str, object]] = {
+    401: {"description": "Authentication required"},
+}
+AUTHZ_RESPONSES: dict[int | str, dict[str, object]] = {
+    401: {"description": "Authentication required"},
+    403: {"description": "Permission denied (or tenant selection invalid)"},
+    404: {"description": "Not found (also used to avoid existence oracles)"},
+}

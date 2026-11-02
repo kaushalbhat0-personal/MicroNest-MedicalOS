@@ -4,8 +4,9 @@ routers, error handlers, health). Domain logic lives in modules.
 There is intentionally NO migration-on-startup. Migrations are explicit jobs
 (alembic CLI / CI). Booting must never mutate the schema.
 """
-from fastapi import APIRouter
-from fastapi import FastAPI
+
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api import errors as error_handlers
@@ -19,6 +20,7 @@ configure_root_logging()
 
 
 def create_app() -> FastAPI:
+    settings = get_settings()
     app = FastAPI(
         title="Healthcare OS",
         version="0.1.0-p1",
@@ -27,6 +29,17 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
     app.add_middleware(RequestIDMiddleware)
+    # Browsers: the web app runs on a different origin in dev/prod.
+    # Credentials mode => explicit origins only, never "*".
+    if settings.ALLOWED_ORIGINS:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.ALLOWED_ORIGINS,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["Content-Type", "Authorization", "X-Tenant", "X-Request-ID"],
+            max_age=600,
+        )
     error_handlers.register_handlers(app)
 
     health = APIRouter(tags=["health"])
