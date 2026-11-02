@@ -54,3 +54,38 @@ def login_client(
 
 def tenant_headers(tenant_id: object) -> dict[str, str]:
     return {"X-Tenant": str(tenant_id)}
+
+
+def provision_scheduling(
+    owner_db,
+    make_owner_user,
+    make_tenant,
+    *,
+    slug: str | None = None,
+    admin_email: str | None = None,
+    practitioner_name: str = "Dr Sched",
+    patient_name: str = "Pat Sched",
+    patient_phone: str | None = "+911234567890",
+):  # type: ignore[no-untyped-def]
+    """Tenant + admin + location + approved practitioner + patient. Returns dict."""
+    from app.modules.patients import service as patients_service
+    from app.modules.tenancy import service as tenancy_service
+
+    base = provision_tenant(
+        owner_db, make_owner_user, make_tenant, slug=slug, admin_email=admin_email
+    )
+    tenant = base["tenant"]
+    practitioner = tenancy_service.register_practitioner(
+        owner_db, display_name=practitioner_name
+    )
+    tenancy_service.set_verification(
+        owner_db, tenant=tenant, practitioner=practitioner, status="approved"
+    )
+    patient = patients_service.register_patient(
+        owner_db,
+        tenant_id=tenant.id,
+        display_name=patient_name,
+        phone=patient_phone,
+    )
+    owner_db.commit()
+    return {**base, "practitioner": practitioner, "patient": patient}

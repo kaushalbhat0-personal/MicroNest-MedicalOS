@@ -10,6 +10,7 @@ psycopg2-binary~=2.9.10
 python-multipart~=0.0.20
 email-validator~=2.2.0
 httpx~=0.28.0
+tzdata~=2026.0
 pytest~=8.3.0
 pytest-cov~=6.0.0
 pgserver~=0.1.0

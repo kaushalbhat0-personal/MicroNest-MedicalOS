@@ -69,11 +69,25 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.ROLES_MANAGE,
             P.LOCATIONS_MANAGE,
             P.AUDIT_READ,
+            P.APPOINTMENT_READ,
+            P.APPOINTMENT_CREATE,
+            P.APPOINTMENT_UPDATE,
+            P.PATIENT_READ,
+            P.PATIENT_CREATE,
         }
     ),
-    "doctor": frozenset({P.TENANT_READ}),
-    "receptionist": frozenset({P.TENANT_READ}),
-    "nurse": frozenset({P.TENANT_READ}),
+    "doctor": frozenset({P.TENANT_READ, P.APPOINTMENT_READ, P.APPOINTMENT_UPDATE, P.PATIENT_READ}),
+    "receptionist": frozenset(
+        {
+            P.TENANT_READ,
+            P.APPOINTMENT_READ,
+            P.APPOINTMENT_CREATE,
+            P.APPOINTMENT_UPDATE,
+            P.PATIENT_READ,
+            P.PATIENT_CREATE,
+        }
+    ),
+    "nurse": frozenset({P.TENANT_READ, P.APPOINTMENT_READ, P.PATIENT_READ}),
     "accountant": frozenset({P.TENANT_READ}),
     "staff": frozenset({P.TENANT_READ}),
     "patient": frozenset(),

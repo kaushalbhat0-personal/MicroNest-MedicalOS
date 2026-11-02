@@ -45,6 +45,8 @@ ALL_TABLES = [
     "memberships",
     "outbox_events",
     "password_resets",
+    "patients",
+    "appointments",
     "practitioner_verifications",
     "practitioners",
     "roles",

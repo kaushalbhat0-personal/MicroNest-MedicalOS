@@ -287,6 +287,36 @@ def create_practitioner(
     )
 
 
+@router.get("/tenants/{tenant_id}/practitioners", response_model=list[S.PractitionerStatus])
+def list_practitioners(
+    tenant_id: uuid.UUID,
+    ctx: RequestContext = Depends(require(P.APPOINTMENT_READ)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> list[S.PractitionerStatus]:
+    """Practitioners visible in this tenant (scheduling picker). Verification
+    status included so the desk books only approved practitioners."""
+    match_tenant(ctx, tenant_id)
+    rows = db.execute(
+        select(Practitioner, Verification)
+        .join(
+            Verification,
+            (Verification.practitioner_id == Practitioner.id)
+            & (Verification.tenant_id == tenant_id),
+            isouter=True,
+        )
+        .where(Practitioner.is_active.is_(True))
+        .order_by(Practitioner.display_name)
+    ).all()
+    return [
+        S.PractitionerStatus(
+            id=p.id,
+            display_name=p.display_name,
+            verification_status=v.status if v is not None else "unregistered",
+        )
+        for p, v in rows
+    ]
+
+
 @router.post("/tenants/{tenant_id}/verification", status_code=200)
 def set_verification(
     tenant_id: uuid.UUID,

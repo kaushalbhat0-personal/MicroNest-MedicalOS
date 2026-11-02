@@ -73,6 +73,12 @@ class PractitionerResponse(BaseModel):
     is_active: bool
 
 
+class PractitionerStatus(BaseModel):
+    id: uuid.UUID
+    display_name: str
+    verification_status: str
+
+
 class VerificationRequest(BaseModel):
     practitioner_id: uuid.UUID
     status: str = Field(pattern=r"^(pending|approved|rejected)$")

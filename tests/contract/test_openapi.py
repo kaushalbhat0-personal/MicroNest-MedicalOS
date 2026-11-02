@@ -27,6 +27,13 @@ REQUIRED_PATHS = [
     "/api/v1/tenants/{tenant_id}/practitioners",
     "/api/v1/tenants/{tenant_id}/verification",
     "/api/v1/tenants/{tenant_id}/audit",
+    "/api/v1/tenants/{tenant_id}/patients",
+    "/api/v1/tenants/{tenant_id}/patients/{patient_id}",
+    "/api/v1/tenants/{tenant_id}/practitioners",
+    "/api/v1/tenants/{tenant_id}/appointments",
+    "/api/v1/tenants/{tenant_id}/appointments/{appointment_id}",
+    "/api/v1/tenants/{tenant_id}/appointments/{appointment_id}/status",
+    "/api/v1/tenants/{tenant_id}/appointments/{appointment_id}/cancel",
 ]
 
 
