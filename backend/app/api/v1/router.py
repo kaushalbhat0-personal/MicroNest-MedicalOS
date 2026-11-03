@@ -7,6 +7,7 @@ from app.api.v1 import (
     account,
     audit,
     auth,
+    billing,
     dental,
     encounters,
     invites,
@@ -29,3 +30,4 @@ router.include_router(scheduling.router, responses=error_handlers.AUTHZ_RESPONSE
 router.include_router(encounters.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(prescriptions.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(dental.router, responses=error_handlers.AUTHZ_RESPONSES)
+router.include_router(billing.router, responses=error_handlers.AUTHZ_RESPONSES)

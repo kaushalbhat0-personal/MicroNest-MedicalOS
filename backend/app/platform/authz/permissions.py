@@ -47,6 +47,8 @@ class P:
     BILLING_CREATE = "billing.create"
     INVOICE_ISSUE = "invoice.issue"
     PAYMENT_RECORD = "payment.record"
+    BILLING_REFUND = "billing.refund"
+    BILLING_CONFIG = "billing.config"
     INVENTORY_READ = "inventory.read"
     INVENTORY_ADJUST = "inventory.adjust"
     DOCUMENT_READ = "documents.read"
@@ -73,6 +75,18 @@ CLINICAL_ADMIN = frozenset(
 )
 
 
+BILLING_FULL = frozenset(
+    {
+        P.BILLING_READ,
+        P.BILLING_CREATE,
+        P.INVOICE_ISSUE,
+        P.PAYMENT_RECORD,
+        P.BILLING_REFUND,
+        P.BILLING_CONFIG,
+    }
+)
+
+
 # Seed role bundles. Tenant admins may define custom roles (subset only —
 # custom roles can never include platform.* permissions).
 SEED_ROLES: dict[str, frozenset[str]] = {
@@ -94,10 +108,19 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.PATIENT_READ,
             P.PATIENT_CREATE,
             *CLINICAL_ADMIN,
+            *BILLING_FULL,
         }
     ),
     "doctor": frozenset(
-        {P.TENANT_READ, P.APPOINTMENT_READ, P.APPOINTMENT_UPDATE, P.PATIENT_READ, *CLINICAL_ADMIN}
+        {
+            P.TENANT_READ,
+            P.APPOINTMENT_READ,
+            P.APPOINTMENT_UPDATE,
+            P.PATIENT_READ,
+            *CLINICAL_ADMIN,
+            P.BILLING_READ,
+            P.BILLING_CREATE,
+        }
     ),
     "receptionist": frozenset(
         {
@@ -109,6 +132,8 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.PATIENT_CREATE,
             P.ENCOUNTER_OPEN,
             P.ENCOUNTER_READ,
+            P.BILLING_READ,
+            P.PAYMENT_RECORD,
         }
     ),
     "nurse": frozenset(
@@ -121,7 +146,7 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.CLINICAL_CREATE,
         }
     ),
-    "accountant": frozenset({P.TENANT_READ}),
+    "accountant": frozenset({P.TENANT_READ, *BILLING_FULL}),
     "staff": frozenset({P.TENANT_READ}),
     "patient": frozenset(),
 }

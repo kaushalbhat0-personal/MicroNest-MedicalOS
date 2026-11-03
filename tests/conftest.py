@@ -40,23 +40,32 @@ ALL_TABLES = [
     "auth_events",
     "clinical_notes",
     "consents",
+    "credit_notes",
     "credentials",
     "dental_procedure_records",
     "document_references",
     "encounter_diagnoses",
     "encounters",
+    "estimate_lines",
+    "estimates",
     "invitations",
+    "invoice_lines",
+    "invoices",
     "locations",
     "membership_locations",
     "memberships",
     "observations",
     "outbox_events",
     "password_resets",
+    "payment_allocations",
+    "payments",
     "practitioner_verifications",
     "practitioners",
     "prescription_items",
     "prescriptions",
+    "receipts",
     "recalls",
+    "refunds",
     "roles",
     "sessions",
     "tenants",
@@ -69,8 +78,9 @@ ALL_TABLES = [
     "appointments",
 ]
 # Global read-only catalogs (observation_types, diagnosis_codes, medications,
-# dental_conditions, dental_procedures) are seeded by migrations and never
-# truncated: no write endpoint exists, so tests cannot dirty them.
+# dental_conditions, dental_procedures, service_catalog) are seeded by
+# migrations and never truncated: no write endpoint exists, so tests cannot
+# dirty them.
 
 
 def _owner_factory():  # type: ignore[no-untyped-def]
