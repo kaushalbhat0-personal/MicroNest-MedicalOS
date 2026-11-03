@@ -122,7 +122,11 @@ export default function SchedulePage() {
       </nav>
       <div className="card">
         <h1>Schedule</h1>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p id="schedule-error" role="alert" className="error">
+            {error}
+          </p>
+        )}
         {message && <p>{message}</p>}
         {loading ? (
           <p className="muted">Loading schedule…</p>

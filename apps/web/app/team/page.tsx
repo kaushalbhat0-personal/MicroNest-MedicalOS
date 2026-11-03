@@ -58,7 +58,11 @@ export default function TeamPage() {
       </nav>
       <div className="card">
         <h1>Team</h1>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p id="team-error" role="alert" className="error">
+            {error}
+          </p>
+        )}
         <table>
           <thead>
             <tr>
@@ -82,9 +86,22 @@ export default function TeamPage() {
         <h2>Invite member</h2>
         <form onSubmit={invite}>
           <label htmlFor="email">Email</label>
-          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "team-error" : undefined}
+          />
           <label htmlFor="role">Role</label>
-          <select id="role" value={role} onChange={(e) => setRole(e.target.value)}>
+          <select
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            aria-describedby={error ? "team-error" : undefined}
+          >
             <option value="receptionist">receptionist</option>
             <option value="doctor">doctor</option>
             <option value="nurse">nurse</option>

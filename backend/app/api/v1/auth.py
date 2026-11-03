@@ -16,7 +16,7 @@ from app.modules.identity import schemas as S
 from app.modules.identity import service as identity_service
 from app.modules.identity.models import User
 from app.platform.errors import AuthError
-from app.platform.ratelimit import limiter
+from app.platform.ratelimit import limiter, normalize_key
 from app.platform.security import cookies as cookie_util
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,14 +33,14 @@ def login(
     ip = request.client.host if request.client else None
     if not limiter.allow(
         scope="login:ip",
-        key=ip or "unknown",
+        key=normalize_key(ip),
         limit=settings.LOGIN_IP_LIMIT_PER_MIN,
         window_seconds=60,
     ):
         return unauthorized_response("too many attempts")
     if not limiter.allow(
         scope="login:account",
-        key=body.email.lower(),
+        key=normalize_key(body.email),
         limit=settings.LOGIN_ACCOUNT_LIMIT_PER_MIN,
         window_seconds=60,
     ):
@@ -70,6 +70,16 @@ def refresh(
     db: DBSession = Depends(get_db),  # noqa: B008
 ) -> object:
     settings = get_cached_settings()
+    # Refresh secrets are bearer-equivalent and guessable: throttle per IP.
+    # Failures (including throttling) stay indistinguishable 401s (no oracle).
+    ip = request.client.host if request.client else None
+    if not limiter.allow(
+        scope="refresh:ip",
+        key=normalize_key(ip),
+        limit=settings.REFRESH_IP_LIMIT_PER_MIN,
+        window_seconds=60,
+    ):
+        return unauthorized_response("too many attempts")
     raw = request.cookies.get(cookie_util.REFRESH_COOKIE)
     if not raw or "." not in raw:
         return unauthorized_response("refresh required")

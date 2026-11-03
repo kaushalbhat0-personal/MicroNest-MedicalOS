@@ -103,7 +103,11 @@ export default function EncountersPage() {
       </nav>
       <div className="card">
         <h1>Encounters</h1>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p id="encounters-error" role="alert" className="error">
+            {error}
+          </p>
+        )}
         {message && <p>{message}</p>}
         {loading ? (
           <p className="muted">Loading encounters…</p>

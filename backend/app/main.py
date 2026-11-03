@@ -15,6 +15,7 @@ from app.api.v1.router import router as v1_router
 from app.platform.config import get_settings
 from app.platform.logging_setup import configure_root_logging
 from app.platform.request_context import RequestIDMiddleware
+from app.platform.security_headers import SecurityHeadersMiddleware
 
 configure_root_logging()
 
@@ -29,6 +30,9 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
     app.add_middleware(RequestIDMiddleware)
+    # HSTS only when the deployment terminates HTTPS (COOKIE_SECURE is the
+    # prod-HTTPS marker); the remaining headers are safe on every response.
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.COOKIE_SECURE)
     # Browsers: the web app runs on a different origin in dev/prod.
     # Credentials mode => explicit origins only, never "*".
     if settings.ALLOWED_ORIGINS:

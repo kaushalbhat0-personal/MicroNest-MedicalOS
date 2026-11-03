@@ -1,5 +1,9 @@
 """API: platform + tenant administration + audit reads + the P1 demo flow."""
 
+import threading
+
+from fastapi.testclient import TestClient
+
 from tests.helpers import (
     login_client,
     make_platform_admin,
@@ -237,3 +241,64 @@ def test_practitioner_register_and_verify(
     )
     queue = boss.get(f"/api/v1/tenants/{tid}/verification", headers=h).json()
     assert queue[0]["status"] == "approved"
+
+
+def test_concurrent_last_admin_demotion_single_survivor(
+    client, owner_db, make_owner_user, make_tenant
+) -> None:
+    """P4.8: the last-admin guard holds under concurrency (SELECT FOR UPDATE).
+
+    Two admins demote each other at the same instant: exactly one wins and
+    the tenant keeps one administrator.
+    """
+    from app.modules.tenancy import service as tenancy_service
+
+    ctx = provision_tenant(
+        owner_db, make_owner_user, make_tenant, admin_email="a3@example.com"
+    )
+    tid = str(ctx["tenant"].id)
+    second = make_owner_user(email="a4@example.com")
+    tenancy_service.create_membership(
+        owner_db,
+        user=second,
+        tenant=ctx["tenant"],
+        role=tenancy_service.get_seed_role(owner_db, "tenant_admin"),
+    )
+    owner_db.commit()
+    members = (
+        login_client(client, email=ctx["admin"].email)
+        .get(f"/api/v1/tenants/{tid}/memberships", headers=tenant_headers(tid))
+        .json()
+    )
+    by_user = {m["user_id"]: m["id"] for m in members}
+    first_mid = by_user[str(ctx["admin"].id)]
+    second_mid = by_user[str(second.id)]
+    assert first_mid != second_mid
+    gate = threading.Barrier(3)
+    results: list[int] = []
+
+    def attempt(email: str, target: str) -> None:
+        c = TestClient(client.app, base_url="http://test")
+        resp = c.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "password-12345-abc"},
+        )
+        assert resp.status_code == 200, resp.text
+        gate.wait(timeout=30)
+        r = c.patch(
+            f"/api/v1/tenants/{tid}/memberships/{target}",
+            headers=tenant_headers(tid),
+            json={"role": "staff"},
+        )
+        results.append(r.status_code)
+
+    threads = [
+        threading.Thread(target=attempt, args=("a3@example.com", second_mid)),
+        threading.Thread(target=attempt, args=("a4@example.com", first_mid)),
+    ]
+    for t in threads:
+        t.start()
+    gate.wait(timeout=30)
+    for t in threads:
+        t.join(timeout=120)
+    assert sorted(results) == [200, 403], results

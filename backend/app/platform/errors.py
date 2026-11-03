@@ -32,6 +32,11 @@ class ConflictError(DomainError):
     status = 409
 
 
+class RateLimitError(DomainError):
+    code = "rate_limited"
+    status = 429
+
+
 class ValidationError(DomainError):
     code = "validation_failed"
     status = 422

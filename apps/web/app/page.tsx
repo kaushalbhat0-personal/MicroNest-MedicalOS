@@ -47,7 +47,11 @@ export default function HomePage() {
       <div className="card">
         <h1>Welcome, {me.display_name}</h1>
         <p className="muted">{me.email}</p>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
         <label htmlFor="tenant">Tenant</label>
         <select
           id="tenant"

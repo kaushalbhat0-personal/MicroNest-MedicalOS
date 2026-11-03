@@ -40,7 +40,11 @@ export default function SessionsPage() {
       </nav>
       <div className="card">
         <h1>Sessions</h1>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
         <table>
           <thead>
             <tr>

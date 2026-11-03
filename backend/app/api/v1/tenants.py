@@ -23,8 +23,9 @@ from app.modules.tenancy import service as tenancy_service
 from app.modules.tenancy.models import Membership, Role, Verification
 from app.platform.authz.permissions import P
 from app.platform.authz.scope import RequestContext
-from app.platform.errors import NotFoundError
+from app.platform.errors import NotFoundError, RateLimitError
 from app.platform.ports.ports import NotifyRequest
+from app.platform.ratelimit import limiter, normalize_key
 from app.platform.request_context import request_id_ctx
 
 router = APIRouter(tags=["tenants"])
@@ -241,6 +242,19 @@ def create_invite(
     db: DBSession = Depends(get_db),  # noqa: B008
 ) -> IS.InviteCreateResponse:
     match_tenant(ctx, tenant_id)
+    from app.api.deps import get_cached_settings
+
+    settings = get_cached_settings()
+    # Authenticated abuse: invitation spam burns notification quota and
+    # creates live capability tokens. Per-user throttle; the caller knows
+    # who they are, so 429 leaks nothing.
+    if not limiter.allow(
+        scope="invite-create:user",
+        key=normalize_key(str(ctx.user_id)),
+        limit=settings.INVITE_CREATE_USER_LIMIT_PER_MIN,
+        window_seconds=60,
+    ):
+        raise RateLimitError("too many invitations; try again later")
     t = tenancy_service.get_tenant(db, tenant_id)
     role = _role_by_name(db, tenant_id, body.role)
     inviter = db.get(User, ctx.user_id)

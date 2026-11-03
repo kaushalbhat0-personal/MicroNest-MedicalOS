@@ -7,7 +7,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <main className="container">{children}</main>
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
+        <main id="main-content" className="container" tabIndex={-1}>
+          {children}
+        </main>
       </body>
     </html>
   );

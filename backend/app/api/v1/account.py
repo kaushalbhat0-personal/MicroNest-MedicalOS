@@ -113,13 +113,13 @@ def reset_request(
     db: DBSession = Depends(get_db),  # noqa: B008
 ) -> dict[str, str]:
     from app.api.deps import get_cached_settings
-    from app.platform.ratelimit import limiter
+    from app.platform.ratelimit import limiter, normalize_key
 
     settings = get_cached_settings()
     ip = request.client.host if request.client else "unknown"
     throttled = not limiter.allow(
         scope="reset:ip",
-        key=ip,
+        key=normalize_key(ip),
         limit=settings.LOGIN_IP_LIMIT_PER_MIN,
         window_seconds=60,
     )
@@ -145,7 +145,22 @@ def reset_request(
 @router.post("/password-reset/confirm")
 def reset_confirm(
     body: S.PasswordResetConfirm,
+    request: Request,
     db: DBSession = Depends(get_db),  # noqa: B008
 ) -> dict[str, str]:
+    from app.api.deps import get_cached_settings
+    from app.platform.errors import GoneError
+    from app.platform.ratelimit import limiter, normalize_key
+
+    settings = get_cached_settings()
+    ip = request.client.host if request.client else "unknown"
+    if not limiter.allow(
+        scope="reset-confirm:ip",
+        key=normalize_key(ip),
+        limit=settings.RESET_CONFIRM_IP_LIMIT_PER_MIN,
+        window_seconds=60,
+    ):
+        # No oracle: throttled guesses look exactly like bad tokens.
+        raise GoneError("reset token invalid or expired")
     identity_service.consume_password_reset(db, token=body.token, new_password=body.new_password)
     return {"status": "ok"}

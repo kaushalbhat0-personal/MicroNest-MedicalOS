@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     STORAGE_LOCAL_ROOT: str = Field(default="./var/storage")
     LOGIN_IP_LIMIT_PER_MIN: int = Field(default=10)
     LOGIN_ACCOUNT_LIMIT_PER_MIN: int = Field(default=5)
+    # P4.8 hardening: token-guessing and spam surfaces. Defaults are
+    # generous for single-process dev/test; tune per deployment.
+    REFRESH_IP_LIMIT_PER_MIN: int = Field(default=30)
+    RESET_CONFIRM_IP_LIMIT_PER_MIN: int = Field(default=10)
+    INVITE_CREATE_USER_LIMIT_PER_MIN: int = Field(default=20)
     API_HOST: str = Field(default="127.0.0.1")
     API_PORT: int = Field(default=8000)
 

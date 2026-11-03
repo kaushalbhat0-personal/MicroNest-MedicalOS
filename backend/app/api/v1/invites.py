@@ -29,13 +29,13 @@ def accept_invite(
 ) -> S.MeResponse:
     from app.api.deps import get_cached_settings
     from app.platform.errors import GoneError
-    from app.platform.ratelimit import limiter
+    from app.platform.ratelimit import limiter, normalize_key
 
     settings = get_cached_settings()
     ip = request.client.host if request.client else "unknown"
     if not limiter.allow(
         scope="invite:ip",
-        key=ip,
+        key=normalize_key(ip),
         limit=settings.LOGIN_IP_LIMIT_PER_MIN,
         window_seconds=60,
     ):

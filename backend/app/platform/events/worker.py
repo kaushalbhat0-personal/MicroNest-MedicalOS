@@ -6,31 +6,37 @@ registered in app wiring (main.py), never here — this module stays generic.
 
 import time
 
-from app.platform.config import get_settings
+from app.platform.config import Settings, get_settings
 from app.platform.db import make_session_factory, scoped_transaction
-from app.platform.events.service import process_batch
+from app.platform.events.outbox import OutboxEvent
+from app.platform.events.service import Handler, process_batch
 from app.platform.logging_setup import configure_root_logging, get_logger
 
 log = get_logger(__name__)
 
 
-def build_handlers(settings):  # type: ignore[no-untyped-def]
+def build_handlers(settings: Settings) -> dict[str, Handler]:
     from app.platform.adapters.dev_adapters import DevNotifyAdapter
 
-    handlers = {}
+    handlers: dict[str, Handler] = {}
 
-    def _notify(event):  # type: ignore[no-untyped-def]
+    def _notify(event: OutboxEvent) -> None:
         adapter = DevNotifyAdapter(settings)
         from app.platform.ports.ports import NotifyRequest
 
+        payload = event.payload
+        raw_refs = payload.get("context_refs", {})
+        if isinstance(raw_refs, dict):
+            context_refs = {k: str(v) for k, v in dict(raw_refs).items()}
+        else:
+            context_refs = {}
+
         req = NotifyRequest(
-            channel=str(event.payload.get("channel", "in_app")),
-            to_ref=str(event.payload.get("to_ref", "")),
-            template=str(event.payload.get("template", "")),
-            locale=str(event.payload.get("locale", "en")),
-            context_refs={
-                k: str(v) for k, v in dict(event.payload.get("context_refs", {})).items()
-            },
+            channel=str(payload.get("channel", "in_app")),
+            to_ref=str(payload.get("to_ref", "")),
+            template=str(payload.get("template", "")),
+            locale=str(payload.get("locale", "en")),
+            context_refs=context_refs,
             tenant_id=event.tenant_id,
         )
         adapter.send(req)

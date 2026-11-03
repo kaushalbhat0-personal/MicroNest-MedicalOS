@@ -344,6 +344,12 @@ def update_membership(
     if not target_active or not _role_has_staff_manage(target_role):
         current_role = db.get(Role, membership.role_id)
         if current_role is not None and _role_has_staff_manage(current_role):
+            # Transactional guard (P4.8): lock the tenant's other active
+            # memberships in a deterministic order before counting admins.
+            # Without the row locks, two concurrent demotions could both read
+            # a surviving admin and commit, stranding the tenant with none
+            # (write skew under READ COMMITTED). Ordered locking avoids
+            # deadlocks between competing demotions.
             others = db.execute(
                 select(Membership, Role)
                 .join(Role, Membership.role_id == Role.id)
@@ -352,6 +358,8 @@ def update_membership(
                     Membership.id != membership.id,
                     Membership.is_active.is_(True),
                 )
+                .order_by(Membership.id)
+                .with_for_update(of=Membership)
             ).all()
             if not any(_role_has_staff_manage(r) for _, r in others):
                 raise ForbiddenError("cannot remove the last tenant administrator")
