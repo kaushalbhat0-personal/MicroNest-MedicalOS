@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* Tailwind v4 bridge. Utilities reference live CSS variables (@theme
+ * inline), so tenant brand overrides apply at runtime without rebuild.
+ * Rule: themed values come ONLY from --hos-* tokens. Layout/spacing
+ * utilities are Tailwind's; colors/typography outside the theme are
+ * forbidden (see scripts/check-design-tokens.py).
+ */
+@source "../web/app";
+@source "../web/lib";
+
+@theme inline {
+  --color-primary: var(--hos-primary);
+  --color-primary-hover: var(--hos-primary-hover);
+  --color-primary-active: var(--hos-primary-active);
+  --color-primary-foreground: var(--hos-primary-foreground);
+  --color-secondary: var(--hos-secondary);
+  --color-secondary-foreground: var(--hos-secondary-foreground);
+  --color-danger: var(--hos-danger);
+  --color-danger-hover: var(--hos-danger-hover);
+  --color-danger-foreground: var(--hos-danger-foreground);
+  --color-background: var(--hos-bg);
+  --color-foreground: var(--hos-fg);
+  --color-surface: var(--hos-surface);
+  --color-surface-muted: var(--hos-surface-muted);
+  --color-border: var(--hos-border);
+  --color-border-strong: var(--hos-border-strong);
+  --color-muted: var(--hos-text-muted);
+  --color-success: var(--hos-success);
+  --color-warning: var(--hos-warning);
+  --color-info: var(--hos-info);
+  --color-focus: var(--hos-focus-ring);
+
+  --font-sans: var(--hos-font-sans);
+  --font-mono: var(--hos-font-mono);
+
+  --radius-sm: var(--hos-radius-sm);
+  --radius-md: var(--hos-radius-md);
+  --radius-lg: var(--hos-radius-lg);
+}

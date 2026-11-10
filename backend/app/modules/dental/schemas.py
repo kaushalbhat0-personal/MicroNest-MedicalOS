@@ -194,3 +194,13 @@ class DocumentRefResponse(BaseModel):
     sha256: str | None
     notes: str | None
     created_at: datetime
+
+
+class DocumentAccessResponse(BaseModel):
+    """Short-lived bearer access to one document's bytes. Carries the signed
+    URL only — never the storage key, bucket, or credentials."""
+
+    document_id: uuid.UUID
+    url: str
+    expires_in_seconds: int
+    content_type: str | None

@@ -45,3 +45,8 @@ class ValidationError(DomainError):
 class GoneError(DomainError):
     code = "gone"
     status = 410
+
+
+class ServiceUnavailableError(DomainError):
+    code = "service_unavailable"
+    status = 503

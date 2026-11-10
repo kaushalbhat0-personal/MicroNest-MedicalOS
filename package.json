@@ -10,6 +10,7 @@
     "web:dev": "npm run dev -w @healthcare-os/web",
     "web:build": "npm run build -w @healthcare-os/web",
     "web:typecheck": "npm run typecheck -w @healthcare-os/web",
-    "ui:typecheck": "npm run typecheck -w @healthcare-os/ui"
+    "ui:typecheck": "npm run typecheck -w @healthcare-os/ui",
+    "ui:test": "npm run test -w @healthcare-os/ui"
   }
 }

@@ -13,17 +13,22 @@ from app.api.v1 import (
     invites,
     patients,
     platform,
+    portal,
     prescriptions,
     scheduling,
+    signup,
     tenants,
+    workspaces,
 )
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router, responses=error_handlers.AUTHN_RESPONSES)
 router.include_router(account.router, responses=error_handlers.AUTHN_RESPONSES)
 router.include_router(invites.router, responses=error_handlers.AUTHN_RESPONSES)
+router.include_router(signup.router, responses=error_handlers.AUTHN_RESPONSES)
 router.include_router(platform.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(tenants.router, responses=error_handlers.AUTHZ_RESPONSES)
+router.include_router(workspaces.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(audit.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(patients.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(scheduling.router, responses=error_handlers.AUTHZ_RESPONSES)
@@ -31,3 +36,4 @@ router.include_router(encounters.router, responses=error_handlers.AUTHZ_RESPONSE
 router.include_router(prescriptions.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(dental.router, responses=error_handlers.AUTHZ_RESPONSES)
 router.include_router(billing.router, responses=error_handlers.AUTHZ_RESPONSES)
+router.include_router(portal.router, responses=error_handlers.AUTHZ_RESPONSES)

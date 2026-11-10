@@ -1,12 +1,192 @@
-/* Healthcare OS design tokens (primitive layer). P1: palette + radii only.
-   Full semantic/component layers land with the P5 design-system build. */
+/* Healthcare OS design tokens — single source of truth.
+ *
+ * Layers: primitive (raw values) → semantic (purpose) → component.
+ * Tenant white-labeling may override --hos-brand-* primitive tokens ONLY.
+ * Semantic and component layers are immutable (protects contrast, status
+ * semantics, focus visibility, and authorization-independent behavior).
+ *
+ * Contrast notes (white backgrounds unless stated):
+ * - primary #2563eb on white 5.1:1; white on primary 5.1:1 (AA normal)
+ * - success #15803d on white ~5.0:1; warning text #8a5a00 on #fef3c7 ~7:1
+ * - danger #dc2626 on white ~4.8:1; muted #64748b on white ~4.7:1
+ *   (both pass AA normal; verify in Penpot before small-text use)
+ * - border-default is decorative only (fails non-text contrast by design);
+ *   use border-strong anywhere a boundary carries meaning.
+ */
+
 :root {
+  /* ---- Primitive: blue (brand + info base) ---- */
+  --hos-blue-50: #eff6ff;
+  --hos-blue-100: #dbeafe;
+  --hos-blue-200: #bfdbfe;
+  --hos-blue-500: #3b82f6;
+  --hos-blue-600: #2563eb;
+  --hos-blue-700: #1d4ed8;
+  --hos-blue-900: #1e3a8a;
+
+  /* ---- Primitive: neutrals ---- */
+  --hos-slate-50: #f8fafc;
+  --hos-slate-100: #f1f5f9;
+  --hos-slate-200: #e2e8f0;
+  --hos-slate-400: #94a3b8;
+  --hos-slate-500: #64748b;
+  --hos-slate-700: #334155;
+  --hos-slate-900: #0f172a;
+  --hos-white: #ffffff;
+
+  /* ---- Primitive: feedback ramps ---- */
+  --hos-green-50: #f0fdf4;
+  --hos-green-700: #15803d;
+  --hos-green-900: #14532d;
+  --hos-amber-100: #fef3c7;
+  --hos-amber-700: #b45309;
+  --hos-amber-800: #8a5a00;
+  --hos-red-50: #fef2f2;
+  --hos-red-600: #dc2626;
+  --hos-red-900: #7f1d1d;
+
+  /* ---- Primitive: brand (white-label override point) ---- */
+  --hos-brand-primary: #2563eb;
+  --hos-brand-primary-hover: #1d4ed8;
+  --hos-brand-primary-active: #1e40af;
+  --hos-brand-accent: #d97706;
+
+  /* ---- Semantic: surfaces ---- */
   --hos-bg: #f8fafc;
   --hos-fg: #0f172a;
-  --hos-muted: #64748b;
-  --hos-card: #ffffff;
+  --hos-surface: #ffffff;
+  --hos-surface-raised: #ffffff;
+  --hos-surface-muted: #f1f5f9;
   --hos-border: #e2e8f0;
+  --hos-border-subtle: #f1f5f9;
+  --hos-border-strong: #64748b;
+
+  /* ---- Semantic: text ---- */
+  --hos-text-primary: #0f172a;
+  --hos-text-secondary: #334155;
+  --hos-text-muted: #64748b;
+  --hos-text-disabled: #94a3b8;
+  --hos-text-on-primary: #ffffff;
+  --hos-text-on-danger: #ffffff;
+
+  /* ---- Semantic: actions ---- */
   --hos-primary: #2563eb;
+  --hos-primary-hover: #1d4ed8;
+  --hos-primary-active: #1e40af;
+  --hos-primary-foreground: #ffffff;
+  --hos-secondary: #f1f5f9;
+  --hos-secondary-foreground: #0f172a;
   --hos-danger: #dc2626;
-  --hos-radius: 12px;
+  --hos-danger-hover: #b91c1c;
+  --hos-danger-foreground: #ffffff;
+
+  /* ---- Semantic: feedback ---- */
+  --hos-success: #15803d;
+  --hos-success-foreground: #ffffff;
+  --hos-success-bg: #f0fdf4;
+  --hos-warning: #8a5a00;
+  --hos-warning-foreground: #ffffff;
+  --hos-warning-bg: #fef3c7;
+  --hos-info: #1d4ed8;
+  --hos-info-foreground: #ffffff;
+  --hos-info-bg: #eff6ff;
+
+  /* ---- Semantic: focus + disabled ---- */
+  --hos-focus-ring: #2563eb;
+  --hos-disabled-bg: #f1f5f9;
+  --hos-disabled-text: #94a3b8;
+
+  /* ---- Semantic: clinical states ---- */
+  --hos-clinical-stable: #15803d;
+  --hos-clinical-stable-bg: #f0fdf4;
+  --hos-clinical-attention: #8a5a00;
+  --hos-clinical-attention-bg: #fef3c7;
+  --hos-clinical-critical: #dc2626;
+  --hos-clinical-critical-bg: #fef2f2;
+  --hos-clinical-unknown: #64748b;
+  --hos-clinical-unknown-bg: #f1f5f9;
+
+  /* ---- Semantic: financial states ---- */
+  --hos-billing-draft: #64748b;
+  --hos-billing-draft-bg: #f1f5f9;
+  --hos-billing-pending: #8a5a00;
+  --hos-billing-pending-bg: #fef3c7;
+  --hos-billing-issued: #1d4ed8;
+  --hos-billing-issued-bg: #eff6ff;
+  --hos-billing-paid: #15803d;
+  --hos-billing-paid-bg: #f0fdf4;
+  --hos-billing-partial: #b45309;
+  --hos-billing-partial-bg: #fef3c7;
+  --hos-billing-overdue: #dc2626;
+  --hos-billing-overdue-bg: #fef2f2;
+  --hos-billing-refunded: #334155;
+  --hos-billing-refunded-bg: #f1f5f9;
+  --hos-billing-void: #64748b;
+  --hos-billing-void-bg: #f1f5f9;
+  --hos-billing-cancelled: #64748b;
+  --hos-billing-cancelled-bg: #f1f5f9;
+
+  /* ---- Typography ---- */
+  --hos-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --hos-font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+    monospace;
+  --hos-text-display: 30px;
+  --hos-text-h1: 24px;
+  --hos-text-h2: 20px;
+  --hos-text-h3: 16px;
+  --hos-text-body: 15px;
+  --hos-text-small: 13px;
+  --hos-text-caption: 12px;
+  --hos-text-label: 13px;
+  --hos-leading-tight: 1.25;
+  --hos-leading-normal: 1.5;
+  --hos-leading-relaxed: 1.6;
+
+  /* ---- Spacing (4px base) ---- */
+  --hos-space-1: 4px;
+  --hos-space-2: 8px;
+  --hos-space-3: 12px;
+  --hos-space-4: 16px;
+  --hos-space-5: 20px;
+  --hos-space-6: 24px;
+  --hos-space-8: 32px;
+  --hos-space-10: 40px;
+  --hos-space-12: 48px;
+  --hos-space-16: 64px;
+  --hos-space-20: 80px;
+  --hos-space-24: 96px;
+
+  /* ---- Radius (restrained; pills only for badges/tags) ---- */
+  --hos-radius-sm: 8px;
+  --hos-radius-md: 12px;
+  --hos-radius-lg: 16px;
+  --hos-radius-pill: 999px;
+  --hos-radius-full: 50%;
+
+  /* ---- Elevation (border-first; shadows only for floating UI) ---- */
+  --hos-shadow-none: none;
+  --hos-shadow-subtle: 0 1px 2px rgb(15 23 42 / 0.06);
+  --hos-shadow-raised: 0 4px 12px rgb(15 23 42 / 0.1);
+  --hos-shadow-overlay: 0 12px 32px rgb(15 23 42 / 0.18);
+
+  /* ---- Motion (subtle; disabled under reduced motion) ---- */
+  --hos-duration-fast: 150ms;
+  --hos-duration-normal: 250ms;
+  --hos-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---- Density (control heights / row heights / gaps) ---- */
+  --hos-density-control-comfortable: 48px;
+  --hos-density-control-compact: 44px;
+  --hos-density-control-dense: 40px;
+  --hos-density-row-comfortable: 56px;
+  --hos-density-row-compact: 44px;
+  --hos-density-row-dense: 36px;
+
+  /* ---- Breakpoints (informational; Tailwind theme is authoritative) ---- */
+  --hos-bp-sm: 640px;
+  --hos-bp-md: 768px;
+  --hos-bp-lg: 1024px;
+  --hos-bp-xl: 1280px;
+  --hos-bp-2xl: 1536px;
 }

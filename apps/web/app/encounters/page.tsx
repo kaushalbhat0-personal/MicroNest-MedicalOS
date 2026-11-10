@@ -1,9 +1,23 @@
 "use client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  Field,
+  LoadingState,
+  Select,
+  Status,
+  Table,
+  Td,
+  Th,
+} from "@healthcare-os/ui";
 import { api } from "@/lib/api";
 import { getSelectedTenant } from "@/lib/tenant";
+import { Shell } from "../shell";
 
 type Encounter = {
   id: string;
@@ -29,6 +43,7 @@ export default function EncountersPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [closingId, setClosingId] = useState<string | null>(null);
 
   function load(t: string) {
     setLoading(true);
@@ -77,15 +92,16 @@ export default function EncountersPage() {
     }
   }
 
-  async function closeEncounter(id: string) {
-    if (!tenant) return;
+  async function closeEncounter() {
+    if (!tenant || !closingId) return;
     setError("");
     try {
       await api.post(
-        `/api/v1/tenants/${tenant}/encounters/${id}/close`,
+        `/api/v1/tenants/${tenant}/encounters/${closingId}/close`,
         { note_waiver: true, vitals_waiver: true, reason: "wrap-up" },
         tenant,
       );
+      setClosingId(null);
       load(tenant);
     } catch (err) {
       setError((err as Error).message);
@@ -93,97 +109,112 @@ export default function EncountersPage() {
   }
 
   return (
-    <>
-      <nav>
-        <Link href="/">Home</Link>
-        <Link href="/team">Team</Link>
-        <Link href="/sessions">Sessions</Link>
-        <Link href="/schedule">Schedule</Link>
-        <Link href="/encounters">Encounters</Link>
-      </nav>
-      <div className="card">
-        <h1>Encounters</h1>
-        {error && (
-          <p id="encounters-error" role="alert" className="error">
+    <Shell>
+      <Card title="Encounters">
+        {error ? (
+          <Alert tone="danger" title="Something went wrong">
             {error}
-          </p>
-        )}
-        {message && <p>{message}</p>}
+          </Alert>
+        ) : null}
+        {message ? <Alert tone="success">{message}</Alert> : null}
         {loading ? (
-          <p className="muted">Loading encounters…</p>
+          <LoadingState label="Loading encounters" />
         ) : items.length === 0 ? (
-          <p className="muted">No encounters yet. Open the first one below.</p>
+          <EmptyState title="No encounters yet">Open the first one below.</EmptyState>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Opened</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((e) => (
-                <tr key={e.id}>
-                  <td>{new Date(e.opened_at).toLocaleString()}</td>
-                  <td>{e.status}</td>
-                  <td>
-                    {e.status === "open" && (
-                      <button onClick={() => void closeEncounter(e.id)}>Close</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <div className="card">
-        <h2>Open encounter</h2>
-        <form onSubmit={openEncounter}>
-          <label htmlFor="patient">Patient</label>
-          <select id="patient" value={patientId} onChange={(e) => setPatientId(e.target.value)} required>
-            <option value="" disabled>
-              Select patient
-            </option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.display_name}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="practitioner">Practitioner</label>
-          <select
-            id="practitioner"
-            value={practitionerId}
-            onChange={(e) => setPractitionerId(e.target.value)}
-            required
+          <Table
+            caption="Encounters"
+            density="compact"
+            columns={
+              <>
+                <Th>Opened</Th>
+                <Th>Status</Th>
+                <Th>Actions</Th>
+              </>
+            }
           >
-            <option value="" disabled>
-              Select practitioner
-            </option>
-            {practitioners.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.display_name}
-              </option>
+            {items.map((e) => (
+              <tr key={e.id}>
+                <Td>{new Date(e.opened_at).toLocaleString()}</Td>
+                <Td>
+                  <Status value={e.status} />
+                </Td>
+                <Td>
+                  {e.status === "open" && (
+                    <Button size="sm" variant="secondary" onClick={() => setClosingId(e.id)}>
+                      Close
+                    </Button>
+                  )}
+                </Td>
+              </tr>
             ))}
-          </select>
-          <label htmlFor="location">Location</label>
-          <select id="location" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
-            <option value="" disabled>
-              Select location
-            </option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+          </Table>
+        )}
+      </Card>
+      <Card title="Open encounter">
+        <form onSubmit={openEncounter}>
+          <Field label="Patient" htmlFor="patient" required>
+            {() => (
+              <Select
+                id="patient"
+                value={patientId}
+                onChange={(e) => setPatientId(e.target.value)}
+                required
+                options={[
+                  { value: "", label: "Select patient" },
+                  ...patients.map((p) => ({ value: p.id, label: p.display_name ?? p.id })),
+                ]}
+              />
+            )}
+          </Field>
+          <Field label="Practitioner" htmlFor="practitioner" required>
+            {() => (
+              <Select
+                id="practitioner"
+                value={practitionerId}
+                onChange={(e) => setPractitionerId(e.target.value)}
+                required
+                options={[
+                  { value: "", label: "Select practitioner" },
+                  ...practitioners.map((p) => ({
+                    value: p.id,
+                    label: p.display_name ?? p.id,
+                  })),
+                ]}
+              />
+            )}
+          </Field>
+          <Field label="Location" htmlFor="location" required>
+            {() => (
+              <Select
+                id="location"
+                value={locationId}
+                onChange={(e) => setLocationId(e.target.value)}
+                required
+                options={[
+                  { value: "", label: "Select location" },
+                  ...locations.map((l) => ({ value: l.id, label: l.name ?? l.id })),
+                ]}
+              />
+            )}
+          </Field>
           <p>
-            <button type="submit">Open</button>
+            <Button type="submit">Open</Button>
           </p>
         </form>
-      </div>
-    </>
+      </Card>
+      <ConfirmDialog
+        open={closingId !== null}
+        onOpenChange={(o) => {
+          if (!o) setClosingId(null);
+        }}
+        title="Close encounter?"
+        confirmLabel="Close encounter"
+        onConfirm={() => void closeEncounter()}
+      >
+        Closing ends the encounter. This demo uses waivers; a real close requires
+        a finalized note and vitals.
+      </ConfirmDialog>
+    </Shell>
   );
 }

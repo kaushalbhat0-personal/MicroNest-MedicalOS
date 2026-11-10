@@ -46,6 +46,7 @@ ALL_TABLES = [
     "document_references",
     "encounter_diagnoses",
     "encounters",
+    "email_verifications",
     "estimate_lines",
     "estimates",
     "invitations",
@@ -59,6 +60,7 @@ ALL_TABLES = [
     "password_resets",
     "payment_allocations",
     "payments",
+    "portal_links",
     "practitioner_verifications",
     "practitioners",
     "prescription_items",
@@ -69,6 +71,11 @@ ALL_TABLES = [
     "roles",
     "sessions",
     "tenants",
+    "tenant_owners",
+    "tenant_specialties",
+    "subscription_plans",
+    "subscriptions",
+    "workspace_provisions",
     "tooth_finding_surfaces",
     "tooth_findings",
     "treatment_plan_items",
@@ -145,6 +152,18 @@ def owner_db(migrated_db: None):  # type: ignore[no-untyped-def]
                 ),
                 {"name": name, "perms": json.dumps(sorted(perms)), "now": now},
             )
+        # Re-seed the trial plan catalog (truncate wiped migration 0016's
+        # seed row). Values mirror 0016 exactly: trial-only, unenforced.
+        session.execute(
+            text(
+                "INSERT INTO subscription_plans "
+                "(id, code, name, max_locations, max_practitioners, max_staff_seats, "
+                " trial_days, is_active, created_at, updated_at) "
+                "VALUES (gen_random_uuid(), 'trial-14d', 'Trial (14-day)', "
+                " 3, 10, 25, 14, true, :now, :now)"
+            ),
+            {"now": now},
+        )
         session.commit()
         yield session
 

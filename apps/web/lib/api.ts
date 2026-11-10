@@ -37,5 +37,6 @@ export type Me = {
   email: string;
   display_name: string;
   is_platform_admin: boolean;
+  email_verified: boolean;
   tenants: TenantOption[];
 };

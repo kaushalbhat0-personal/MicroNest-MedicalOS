@@ -59,6 +59,7 @@ def login(
         email=user.email,
         display_name=user.display_name,
         is_platform_admin=user.is_platform_admin,
+        email_verified=user.email_verified_at is not None,
         tenants=tenant_options(db, user),
     )
 
@@ -111,5 +112,6 @@ def refresh(
         email=user.email,
         display_name=user.display_name,
         is_platform_admin=user.is_platform_admin,
+        email_verified=user.email_verified_at is not None,
         tenants=tenant_options(db, user),
     )

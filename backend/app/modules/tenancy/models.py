@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, TIMESTAMP, Boolean, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, TIMESTAMP, Boolean, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -83,6 +83,36 @@ class MembershipLocation(Base):
         PG_UUID(as_uuid=True),
         ForeignKey("locations.id", ondelete="CASCADE"),
         primary_key=True,
+    )
+
+
+class TenantOwner(Base):
+    """Commercial authority: who purchased / is responsible for the tenant.
+
+    Explicit association (one user may own N tenants; one tenant may have
+    N owners). Ownership NEVER grants authorization — every request still
+    requires an active membership + permission + tenant match + RLS.
+    `memberships.is_primary` stays a UX hint, never the ownership source.
+    """
+
+    __tablename__ = "tenant_owners"
+
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "user_id", name="uq_tenant_owner"),
+        Index("ix_tenant_owners_tenant", "tenant_id"),
+        Index("ix_tenant_owners_user", "user_id"),
     )
 
 

@@ -18,9 +18,14 @@ from app.modules.clinics import service as clinics_service
 from app.modules.identity import schemas as IS
 from app.modules.identity.models import Practitioner, User
 from app.modules.notifications import service as notify_service
+from app.modules.portal import schemas as portal_schemas
+from app.modules.portal import service as portal_service
+from app.modules.subscriptions import service as subscriptions_service
+from app.modules.subscriptions.models import SubscriptionPlan
 from app.modules.tenancy import schemas as S
 from app.modules.tenancy import service as tenancy_service
 from app.modules.tenancy.models import Membership, Role, Verification
+from app.modules.workspaces import service as workspaces_service
 from app.platform.authz.permissions import P
 from app.platform.authz.scope import RequestContext
 from app.platform.errors import NotFoundError, RateLimitError
@@ -55,15 +60,39 @@ def my_tenants(
     return tenant_options(db, user)
 
 
-@router.get("/tenants/{tenant_id}", response_model=S.TenantResponse)
+@router.get("/tenants/{tenant_id}", response_model=S.TenantDetailResponse)
 def get_tenant(
     tenant_id: uuid.UUID,
     ctx: RequestContext = Depends(require(P.TENANT_READ)),  # noqa: B008
     db: DBSession = Depends(get_db),  # noqa: B008
-) -> S.TenantResponse:
+) -> S.TenantDetailResponse:
     match_tenant(ctx, tenant_id)
     t = tenancy_service.get_tenant(db, tenant_id)
-    return S.TenantResponse(id=t.id, name=t.name, slug=t.slug, status=t.status)
+    subscription = subscriptions_service.get_subscription(db, tenant_id=tenant_id)
+    summary = None
+    if subscription is not None:
+        plan = db.get(SubscriptionPlan, subscription.plan_id)
+        summary = subscriptions_service.build_summary(subscription, plan)
+    specialty_rows = workspaces_service.get_tenant_specialty_rows(db, tenant=t)
+    details = workspaces_service.specialty_details_for_rows(specialty_rows)
+    return S.TenantDetailResponse(
+        id=t.id,
+        name=t.name,
+        slug=t.slug,
+        status=t.status,
+        subscription=summary,
+        specialties_enabled=[str(d["code"]) for d in details],
+        specialties=[
+            S.SpecialtyDetail(
+                code=str(d["code"]),
+                pack_version=str(d["pack_version"]),
+                label=str(d["label"]),
+                maturity=str(d["maturity"]),
+                ready_for_use=bool(d["ready_for_use"]),
+            )
+            for d in details
+        ],
+    )
 
 
 @router.post("/tenants/{tenant_id}/locations", response_model=S.LocationResponse)
@@ -383,3 +412,58 @@ def list_verifications(
         }
         for v, p in rows
     ]
+
+
+@router.post("/tenants/{tenant_id}/portal-links", response_model=portal_schemas.PortalLinkResponse)
+def enroll_portal_user(
+    tenant_id: uuid.UUID,
+    body: portal_schemas.PortalLinkEnroll,
+    ctx: RequestContext = Depends(require(P.STAFF_MANAGE)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> portal_schemas.PortalLinkResponse:
+    """Bind a portal login to a patient (staff-gated enrollment).
+
+    Additive only: no provider behavior changes. New users get an unusable
+    random password and activate through the existing public password-reset
+    flow; existing users keep their credentials (never overwritten here).
+    """
+    match_tenant(ctx, tenant_id)
+    link = portal_service.enroll_patient_user(
+        db,
+        tenant_id=tenant_id,
+        email=body.email,
+        patient_id=body.patient_id,
+        actor_id=ctx.user_id,
+        display_name=body.display_name,
+    )
+    _audit(db, ctx, action="portal.link.enroll", rtype="portal_link", rid=str(link.id))
+    return portal_schemas.PortalLinkResponse(
+        id=link.id,
+        tenant_id=link.tenant_id,
+        user_id=link.user_id,
+        patient_id=link.patient_id,
+        status=link.status,
+    )
+
+
+@router.delete(
+    "/tenants/{tenant_id}/portal-links/{link_id}",
+    response_model=portal_schemas.PortalLinkResponse,
+)
+def revoke_portal_link(
+    tenant_id: uuid.UUID,
+    link_id: uuid.UUID,
+    ctx: RequestContext = Depends(require(P.STAFF_MANAGE)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> portal_schemas.PortalLinkResponse:
+    """Revoke portal access (fail-closed; unknown IDs are 404)."""
+    match_tenant(ctx, tenant_id)
+    link = portal_service.revoke_link(db, tenant_id=tenant_id, link_id=link_id)
+    _audit(db, ctx, action="portal.link.revoke", rtype="portal_link", rid=str(link.id))
+    return portal_schemas.PortalLinkResponse(
+        id=link.id,
+        tenant_id=link.tenant_id,
+        user_id=link.user_id,
+        patient_id=link.patient_id,
+        status=link.status,
+    )

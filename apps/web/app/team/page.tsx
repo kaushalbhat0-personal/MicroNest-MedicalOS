@@ -1,16 +1,39 @@
 "use client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  LoadingState,
+  Select,
+  Table,
+  Td,
+  Th,
+} from "@healthcare-os/ui";
 import { api } from "@/lib/api";
 import { getSelectedTenant } from "@/lib/tenant";
+import { Shell } from "../shell";
 
-type Member = { id: string; user_id: string; role: string; is_active: boolean };
+type Member = {
+  id: string;
+  user_id: string;
+  role: string;
+  is_active: boolean;
+  location_ids?: string[];
+};
+
+const ROLES = ["tenant_admin", "doctor", "receptionist", "nurse", "accountant", "staff"];
 
 export default function TeamPage() {
   const router = useRouter();
   const [tenant, setTenant] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("receptionist");
   const [message, setMessage] = useState("");
@@ -25,8 +48,14 @@ export default function TeamPage() {
     setTenant(t);
     api
       .get<Member[]>(`/api/v1/tenants/${t}/memberships`, t)
-      .then(setMembers)
-      .catch((e: Error) => setError(e.message));
+      .then((m) => {
+        setMembers(m);
+        setLoading(false);
+      })
+      .catch((e: Error) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, [router]);
 
   async function invite(e: React.FormEvent) {
@@ -47,73 +76,126 @@ export default function TeamPage() {
     }
   }
 
+  async function updateMember(id: string, body: { role?: string; is_active?: boolean }) {
+    const t = getSelectedTenant();
+    if (!t) return;
+    setError("");
+    try {
+      await api.patch(`/api/v1/tenants/${t}/memberships/${id}`, body, t);
+      const m = await api.get<Member[]>(`/api/v1/tenants/${t}/memberships`, t);
+      setMembers(m);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   return (
-    <>
-      <nav>
-        <Link href="/">Home</Link>
-        <Link href="/team">Team</Link>
-        <Link href="/sessions">Sessions</Link>
-        <Link href="/schedule">Schedule</Link>
-        <Link href="/encounters">Encounters</Link>
-      </nav>
-      <div className="card">
-        <h1>Team</h1>
-        {error && (
-          <p id="team-error" role="alert" className="error">
+    <Shell>
+      <Card title="Team">
+        {loading ? (
+          <LoadingState label="Loading team" />
+        ) : error && members.length === 0 ? (
+          <Alert tone="danger" title="Could not load team">
             {error}
-          </p>
+          </Alert>
+        ) : members.length === 0 ? (
+          <EmptyState title="No team members yet">
+            Invite the first member below.
+          </EmptyState>
+        ) : (
+          <>
+            {error ? (
+              <Alert tone="danger" title="Something went wrong">
+                {error}
+              </Alert>
+            ) : null}
+            <Table
+              caption="Team members"
+              columns={
+                <>
+                  <Th>User</Th>
+                  <Th>Role</Th>
+                  <Th>Active</Th>
+                  <Th>Actions</Th>
+                </>
+              }
+            >
+              {members.map((m) => (
+                <tr key={m.id}>
+                  <Td>{m.user_id.slice(0, 8)}...</Td>
+                  <Td>
+                    <select
+                      className="hos-input"
+                      aria-label={`Role for member ${m.user_id.slice(0, 8)}`}
+                      value={m.role}
+                      onChange={(e) => void updateMember(m.id, { role: e.target.value })}
+                    >
+                      {ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                      {!ROLES.includes(m.role) ? <option value={m.role}>{m.role}</option> : null}
+                    </select>
+                  </Td>
+                  <Td>
+                    {m.is_active ? (
+                      <Badge tone="success">yes</Badge>
+                    ) : (
+                      <Badge tone="neutral">no</Badge>
+                    )}
+                  </Td>
+                  <Td>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void updateMember(m.id, { is_active: !m.is_active })}
+                    >
+                      {m.is_active ? "Deactivate" : "Activate"}
+                    </Button>
+                  </Td>
+                </tr>
+              ))}
+            </Table>
+          </>
         )}
-        <table>
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Role</th>
-              <th>Active</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((m) => (
-              <tr key={m.id}>
-                <td>{m.user_id.slice(0, 8)}…</td>
-                <td>{m.role}</td>
-                <td>{m.is_active ? "yes" : "no"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="card">
-        <h2>Invite member</h2>
+      </Card>
+      <Card title="Invite member">
         <form onSubmit={invite}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? "team-error" : undefined}
-          />
-          <label htmlFor="role">Role</label>
-          <select
-            id="role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            aria-describedby={error ? "team-error" : undefined}
-          >
-            <option value="receptionist">receptionist</option>
-            <option value="doctor">doctor</option>
-            <option value="nurse">nurse</option>
-            <option value="accountant">accountant</option>
-            <option value="staff">staff</option>
-          </select>
+          <Field label="Email" htmlFor="email" required error={undefined}>
+            {({ describedBy }) => (
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                aria-describedby={describedBy}
+              />
+            )}
+          </Field>
+          <Field label="Role" htmlFor="role">
+            {() => (
+              <Select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                options={[
+                  { value: "receptionist", label: "receptionist" },
+                  { value: "doctor", label: "doctor" },
+                  { value: "nurse", label: "nurse" },
+                  { value: "accountant", label: "accountant" },
+                  { value: "staff", label: "staff" },
+                ]}
+              />
+            )}
+          </Field>
           <p>
-            <button type="submit">Create invitation</button>
+            <Button type="submit">Create invitation</Button>
           </p>
         </form>
-        {message && <p>{message}</p>}
-      </div>
-    </>
+        {message ? <Alert tone="success">{message}</Alert> : null}
+      </Card>
+    </Shell>
   );
 }

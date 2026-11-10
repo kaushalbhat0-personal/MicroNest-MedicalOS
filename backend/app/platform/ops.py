@@ -24,6 +24,7 @@ APP_TABLES = [
     "credentials",
     "sessions",
     "password_resets",
+    "email_verifications",
     "practitioners",
     "auth_events",
     "tenants",
@@ -34,6 +35,13 @@ APP_TABLES = [
     "invitations",
     "practitioner_verifications",
     "audit_events",
+    # O1.2a: ownership, trial subscription catalog + rows, specialty
+    # enablement, provisioning idempotency ledger.
+    "tenant_owners",
+    "subscription_plans",
+    "subscriptions",
+    "tenant_specialties",
+    "workspace_provisions",
     # outbox_events deliberately excluded from app writes via API; the worker
     # uses the same role in P1 (documented exception, internal-only table).
     "outbox_events",
@@ -111,6 +119,62 @@ def cmd_bootstrap(args: argparse.Namespace) -> None:
     print(raw)
 
 
+def cmd_check_readiness() -> int:
+    """Operator readiness probe: config + DB + storage + notify status.
+
+    Prints only variable names and coarse statuses — never secret values,
+    connection strings, or PHI. Exit 0 when the instance may serve traffic.
+    """
+    import uuid
+
+    from app.platform.config import validate_for_boot
+
+    settings = get_settings()
+    problems = validate_for_boot(settings)
+    if problems:
+        print("configuration: INVALID")
+        for problem in problems:
+            print(f"  - {problem}")
+        return 2
+    print(f"configuration: ok (ENV={settings.ENV} DEPLOYMENT={settings.DEPLOYMENT})")
+
+    if not settings.APP_DATABASE_URL:
+        print("database: not-configured")
+        return 2
+    try:
+        factory = make_session_factory(settings.APP_DATABASE_URL)
+        with factory() as session:
+            session.execute(text("SELECT 1"))
+    except Exception:
+        print("database: unreachable")
+        return 1
+    print("database: reachable")
+
+    strict = settings.ENV in ("preview", "prod", "production")
+    try:
+        from app.platform.adapters.s3_storage import build_storage_adapter
+
+        adapter = build_storage_adapter(settings)
+        probe = f"_ops/probe-{uuid.uuid4().hex}"
+        adapter.put(key=probe, data=b"probe", content_type="text/plain")
+        assert adapter.exists(key=probe)
+        assert adapter.get(key=probe) == b"probe"
+        adapter.delete(key=probe)
+        print(f"storage: ok ({settings.STORAGE_ADAPTER})")
+    except Exception as exc:
+        print(f"storage: unavailable ({type(exc).__name__})")
+        if strict:
+            return 1
+
+    from app.platform.adapters.notify import build_notify_adapter
+
+    notify = build_notify_adapter(settings)
+    print(f"notify: provider={notify.name} healthy={notify.health()}")
+    if notify.health() is False and settings.NOTIFY_PROVIDER != "none":
+        print("notify: no healthy provider configured")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     configure_root_logging()
     parser = argparse.ArgumentParser(prog="ops")
@@ -122,11 +186,14 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--location", required=True)
     b.add_argument("--name", default="")
     sub.add_parser("ensure-app-role")
+    sub.add_parser("check-readiness")
     args = parser.parse_args(argv)
     if args.cmd == "bootstrap":
         cmd_bootstrap(args)
     elif args.cmd == "ensure-app-role":
         cmd_ensure_app_role()
+    elif args.cmd == "check-readiness":
+        return cmd_check_readiness()
     return 0
 
 

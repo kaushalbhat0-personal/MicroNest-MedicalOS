@@ -27,6 +27,9 @@ class MeResponse(BaseModel):
     email: str
     display_name: str
     is_platform_admin: bool
+    # Minimum verification exposure for O1.1: the shell decides between
+    # "check your inbox" and normal routing. No challenge state leaks.
+    email_verified: bool
     tenants: list[TenantOption]
 
 
@@ -65,3 +68,17 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str = Field(min_length=MIN_PASSWORD_LENGTH)
+
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    display_name: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH)
+
+
+class VerifyRequest(BaseModel):
+    token: str = Field(min_length=1)
+
+
+class VerifyResendRequest(BaseModel):
+    email: EmailStr

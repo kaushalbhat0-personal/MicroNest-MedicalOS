@@ -22,6 +22,7 @@ from app.modules.tenancy.models import (
     MembershipLocation,
     Role,
     Tenant,
+    TenantOwner,
     Verification,
 )
 from app.platform import ids
@@ -75,6 +76,39 @@ def get_seed_role(db: DBSession, name: str) -> Role:
     if role is None:
         raise NotFoundError(f"seed role {name!r} missing")
     return role
+
+
+# --- Ownership (commercial authority; never an authorization source) ---
+
+
+def create_owner(
+    db: DBSession,
+    *,
+    tenant: Tenant,
+    user: User,
+    created_by: User | None = None,
+) -> TenantOwner:
+    """Record `user` as an owner of `tenant`. Both ids are server-resolved
+    (the caller passes ORM rows, never client-supplied ids). The owner MUST
+    also hold an active membership — enforced by the caller (provisioning
+    creates both in one transaction)."""
+    now = _now()
+    owner = TenantOwner(
+        id=ids.uuid7(),
+        tenant_id=tenant.id,
+        user_id=user.id,
+        created_at=now,
+        created_by=created_by.id if created_by is not None else None,
+    )
+    db.add(owner)
+    db.flush()
+    return owner
+
+
+def list_owners(db: DBSession, *, tenant_id: uuid.UUID) -> list[TenantOwner]:
+    return list(
+        db.execute(select(TenantOwner).where(TenantOwner.tenant_id == tenant_id)).scalars().all()
+    )
 
 
 # --- Memberships ---

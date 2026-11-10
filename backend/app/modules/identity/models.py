@@ -24,6 +24,14 @@ class User(Base):
     # Global platform privilege (like Django's is_staff). NOT a tenant
     # attachment — tenant access always flows through Membership.
     is_platform_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # NULL = never verified (all public signups start here). Pre-O1.1 users
+    # were backfilled to created_at (trusted paths: bootstrap/invite/portal).
+    # Invite acceptance does NOT mark verified: only explicit challenge
+    # consumption writes this field, so verification has exactly two writers
+    # (migration backfill, consume_challenge).
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 
@@ -82,6 +90,31 @@ class PasswordReset(Base):
     expires_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+
+class EmailVerification(Base):
+    """Public-signup email challenge. Non-RLS, capability-gated (like
+    invitations/password_resets): reachable only by unguessable token hash.
+
+    `email` is an immutable binding snapshot (normalized at issue). If the
+    user's email ever differs, the challenge is dead — consume rejects it.
+    Raw tokens are never persisted; only SHA-256 digests.
+    """
+
+    __tablename__ = "email_verifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    email: Mapped[str] = mapped_column(Text, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    superseded_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+    __table_args__ = (Index("ix_email_verifications_user", "user_id"),)
 
 
 class Practitioner(Base):

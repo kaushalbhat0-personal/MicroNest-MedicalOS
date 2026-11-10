@@ -1,0 +1,142 @@
+# P7 cloud preview stack. Isolated resources only: preview database,
+# preview storage namespace, preview ports. NEVER point this at production.
+#
+# Usage:
+#   cp infrastructure/preview/.env.preview.example .env.preview   # fill secrets
+#   docker compose -f infrastructure/preview/docker-compose.yml --env-file .env.preview config
+#   docker compose -f infrastructure/preview/docker-compose.yml --env-file .env.preview up -d db storage
+#   OWNER_DATABASE_URL=... alembic -c backend/alembic.ini upgrade head   # migrate preview db
+#   docker compose -f infrastructure/preview/docker-compose.yml --env-file .env.preview up -d
+
+name: hos-preview
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: healthcare_os_preview
+      POSTGRES_USER: hos_owner
+      POSTGRES_PASSWORD: ${PREVIEW_OWNER_PASSWORD:?set PREVIEW_OWNER_PASSWORD}
+    volumes:
+      - preview-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hos_owner -d healthcare_os_preview"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - preview
+
+  storage:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${PREVIEW_MINIO_ROOT_USER:?set PREVIEW_MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${PREVIEW_MINIO_ROOT_PASSWORD:?set PREVIEW_MINIO_ROOT_PASSWORD}
+    volumes:
+      - preview-miniodata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      - preview
+
+  migrate:
+    image: healthcare-os-backend:preview
+    profiles: ["tools"]
+    environment:
+      OWNER_DATABASE_URL: postgresql+psycopg2://hos_owner:${PREVIEW_OWNER_PASSWORD:?set PREVIEW_OWNER_PASSWORD}@db:5432/healthcare_os_preview
+    command: ["alembic", "-c", "backend/alembic.ini", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - preview
+
+  api:
+    image: healthcare-os-backend:preview
+    environment:
+      ENV: preview
+      DEPLOYMENT: cloud
+      APP_DATABASE_URL: postgresql+psycopg2://hos_app:${PREVIEW_APP_PASSWORD:?set PREVIEW_APP_PASSWORD}@db:5432/healthcare_os_preview
+      APP_ROLE_PASSWORD: ${PREVIEW_APP_PASSWORD:?set PREVIEW_APP_PASSWORD}
+      JWT_SECRET: ${PREVIEW_JWT_SECRET:?set PREVIEW_JWT_SECRET}
+      COOKIE_SECURE: "false"
+      COOKIE_DOMAIN: ""
+      ALLOWED_ORIGINS: '["http://localhost:3001"]'
+      STORAGE_ADAPTER: s3
+      S3_ENDPOINT_URL: http://storage:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: hos-preview-private
+      S3_ACCESS_KEY: ${PREVIEW_MINIO_ROOT_USER:?set PREVIEW_MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${PREVIEW_MINIO_ROOT_PASSWORD:?set PREVIEW_MINIO_ROOT_PASSWORD}
+      S3_USE_TLS: "false"
+      S3_ENSURE_BUCKET: "true"
+      NOTIFY_PROVIDER: none
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/readyz')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - preview
+
+  worker:
+    image: healthcare-os-backend:preview
+    environment:
+      ENV: preview
+      DEPLOYMENT: cloud
+      APP_DATABASE_URL: postgresql+psycopg2://hos_app:${PREVIEW_APP_PASSWORD:?set PREVIEW_APP_PASSWORD}@db:5432/healthcare_os_preview
+      APP_ROLE_PASSWORD: ${PREVIEW_APP_PASSWORD:?set PREVIEW_APP_PASSWORD}
+      JWT_SECRET: ${PREVIEW_JWT_SECRET:?set PREVIEW_JWT_SECRET}
+      COOKIE_SECURE: "false"
+      ALLOWED_ORIGINS: '["http://localhost:3001"]'
+      STORAGE_ADAPTER: s3
+      S3_ENDPOINT_URL: http://storage:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: hos-preview-private
+      S3_ACCESS_KEY: ${PREVIEW_MINIO_ROOT_USER:?set PREVIEW_MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${PREVIEW_MINIO_ROOT_PASSWORD:?set PREVIEW_MINIO_ROOT_PASSWORD}
+      S3_USE_TLS: "false"
+      S3_ENSURE_BUCKET: "true"
+      NOTIFY_PROVIDER: none
+    command: ["python", "-m", "app.platform.events.worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+    networks:
+      - preview
+
+  web:
+    image: healthcare-os-web:preview
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+    ports:
+      - "3001:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - preview
+
+volumes:
+  preview-pgdata:
+  preview-miniodata:
+
+networks:
+  preview:

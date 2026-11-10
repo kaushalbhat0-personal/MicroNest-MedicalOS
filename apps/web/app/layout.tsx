@@ -3,17 +3,15 @@ import "./globals.css";
 
 export const metadata: Metadata = { title: "Healthcare OS" };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <a href="#main-content" className="skip-link">
-          Skip to content
-        </a>
-        <main id="main-content" className="container" tabIndex={-1}>
-          {children}
-        </main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

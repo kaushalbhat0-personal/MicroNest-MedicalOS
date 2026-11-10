@@ -1,8 +1,19 @@
 "use client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  LoadingState,
+  Table,
+  Td,
+  Th,
+} from "@healthcare-os/ui";
 import { api } from "@/lib/api";
+import { Shell } from "../shell";
 
 type SessionInfo = { id: string; created_at: string; ip: string | null; current: boolean };
 
@@ -10,11 +21,16 @@ export default function SessionsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   function load() {
+    setLoading(true);
     api
       .get<SessionInfo[]>("/api/v1/auth/sessions")
-      .then(setSessions)
+      .then((s) => {
+        setSessions(s);
+        setLoading(false);
+      })
       .catch(() => router.push("/login"));
   }
 
@@ -30,43 +46,56 @@ export default function SessionsPage() {
   }
 
   return (
-    <>
-      <nav>
-        <Link href="/">Home</Link>
-        <Link href="/team">Team</Link>
-        <Link href="/sessions">Sessions</Link>
-        <Link href="/schedule">Schedule</Link>
-        <Link href="/encounters">Encounters</Link>
-      </nav>
-      <div className="card">
-        <h1>Sessions</h1>
-        {error && (
-          <p role="alert" className="error">
+    <Shell>
+      <Card title="Sessions">
+        {error ? (
+          <Alert tone="danger" title="Something went wrong">
             {error}
-          </p>
-        )}
-        <table>
-          <thead>
-            <tr>
-              <th>Started</th>
-              <th>IP</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
+          </Alert>
+        ) : null}
+        {loading ? (
+          <LoadingState label="Loading sessions" />
+        ) : sessions.length === 0 ? (
+          <EmptyState title="No sessions">Sign in on a device to see it here.</EmptyState>
+        ) : (
+          <Table
+            caption="Active sessions"
+            columns={
+              <>
+                <Th>Started</Th>
+                <Th>IP</Th>
+                <Th>
+                  <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
+                    Actions
+                  </span>
+                </Th>
+              </>
+            }
+          >
             {sessions.map((s) => (
               <tr key={s.id}>
-                <td>
+                <Td>
                   {new Date(s.created_at).toLocaleString()}
-                  {s.current ? " (this device)" : ""}
-                </td>
-                <td>{s.ip ?? "—"}</td>
-                <td>{!s.current && <button onClick={() => void revoke(s.id)}>Revoke</button>}</td>
+                  {s.current ? (
+                    <>
+                      {" "}
+                      <Badge tone="info">this device</Badge>
+                    </>
+                  ) : null}
+                </Td>
+                <Td>{s.ip ?? "-"}</Td>
+                <Td>
+                  {!s.current && (
+                    <Button size="sm" variant="secondary" onClick={() => void revoke(s.id)}>
+                      Revoke
+                    </Button>
+                  )}
+                </Td>
               </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </>
+          </Table>
+        )}
+      </Card>
+    </Shell>
   );
 }

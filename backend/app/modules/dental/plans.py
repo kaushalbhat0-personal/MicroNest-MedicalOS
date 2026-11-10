@@ -647,6 +647,40 @@ def list_recalls(
     return rows
 
 
+# --- Document access grants ---
+
+#: Signed-URL lifetime for image viewing. Server-side constant: callers can
+#: neither read nor set it. Five minutes covers viewer load + navigation
+#: (each step re-mints); bearer URLs stay usable until expiry by design.
+DOCUMENT_ACCESS_TTL_SECONDS = 300
+
+
+def _is_image_content(content_type: str | None) -> bool:
+    return (content_type or "").strip().lower().startswith("image/")
+
+
+def grant_document_access(
+    db: DBSession,
+    *,
+    tenant_id: uuid.UUID,
+    document_id: uuid.UUID,
+    location_ids: frozenset[uuid.UUID] | None = None,
+) -> DocumentReference:
+    """Authorize a read of one document reference and return it for signed
+    URL minting. UUID opacity is NOT the control: every check below is
+    server-derived. Raises 404 (no oracle) for unknown/cross-tenant rows,
+    403 for out-of-scope locations, 422 for non-image documents."""
+    ref = db.get(DocumentReference, document_id)
+    if ref is None or ref.tenant_id != tenant_id:
+        raise NotFoundError("document not found")
+    _encounter_in_scope(
+        db, tenant_id=tenant_id, encounter_id=ref.encounter_id, location_ids=location_ids
+    )
+    if not _is_image_content(ref.content_type):
+        raise ValidationError("document is not an eligible image")
+    return ref
+
+
 # --- Document references ---
 
 DOC_TYPES = frozenset({"xray", "scan", "photo", "report", "other"})

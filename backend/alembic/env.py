@@ -20,14 +20,17 @@ from app.modules.identity.models import (  # noqa: F401
     Session,
     User,
 )
+from app.modules.subscriptions.models import Subscription, SubscriptionPlan  # noqa: F401
 from app.modules.tenancy.models import (  # noqa: F401
     Invitation,
     Membership,
     MembershipLocation,
     Role,
     Tenant,
+    TenantOwner,
     Verification,
 )
+from app.modules.workspaces.models import TenantSpecialty, WorkspaceProvision  # noqa: F401
 from app.platform.db import Base
 from app.platform.events.outbox import OutboxEvent  # noqa: F401
 

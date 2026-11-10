@@ -9,7 +9,7 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session as DBSession
 
-from app.api.deps import get_db, require
+from app.api.deps import get_cached_settings, get_db, require
 from app.api.v1._shared import match_tenant, practitioner_for_user
 from app.modules.audit import service as audit_service
 from app.modules.dental import plans as dplans
@@ -24,8 +24,10 @@ from app.modules.dental.models import (
     TreatmentPlan,
     TreatmentPlanItem,
 )
+from app.platform.adapters.s3_storage import build_storage_adapter
 from app.platform.authz.permissions import P
 from app.platform.authz.scope import RequestContext
+from app.platform.errors import ServiceUnavailableError
 from app.platform.request_context import request_id_ctx
 
 router = APIRouter(tags=["dental"])
@@ -682,3 +684,41 @@ def list_document_refs(
             db, tenant_id=tenant_id, encounter_id=encounter_id, location_ids=ctx.location_ids
         )
     ]
+
+
+@router.post(
+    "/tenants/{tenant_id}/documents/{document_id}/access",
+    response_model=S.DocumentAccessResponse,
+)
+def grant_document_access(
+    tenant_id: uuid.UUID,
+    document_id: uuid.UUID,
+    ctx: RequestContext = Depends(require(P.DENTAL_READ)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.DocumentAccessResponse:
+    """Mint a short-lived signed URL for one eligible image reference.
+
+    Flat item-action POST by convention (cf. tooth-findings resolve,
+    plan-items status): each call mints a fresh bearer capability, so the
+    operation is intentionally non-idempotent and takes no body. The client
+    supplies only the opaque reference id; the storage key is resolved
+    server-side and never leaves the server except inside the signed URL.
+    """
+    match_tenant(ctx, tenant_id)
+    ref = dplans.grant_document_access(
+        db, tenant_id=tenant_id, document_id=document_id, location_ids=ctx.location_ids
+    )
+    try:
+        adapter = build_storage_adapter(get_cached_settings())
+        url = adapter.signed_access(
+            key=ref.storage_key, expires_seconds=dplans.DOCUMENT_ACCESS_TTL_SECONDS
+        )
+    except RuntimeError as exc:
+        raise ServiceUnavailableError("document storage is unavailable") from exc
+    _audit(db, ctx, action="document.access_granted", rtype="document", rid=str(ref.id))
+    return S.DocumentAccessResponse(
+        document_id=ref.id,
+        url=url,
+        expires_in_seconds=dplans.DOCUMENT_ACCESS_TTL_SECONDS,
+        content_type=ref.content_type,
+    )

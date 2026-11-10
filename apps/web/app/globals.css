@@ -1,55 +1,38 @@
-@import "@healthcare-os/ui/tokens.css";
+@import "@healthcare-os/ui/theme.css";
+@import "@healthcare-os/ui/components.css";
 
-/* Palette source of truth: @healthcare-os/ui tokens. Aliases map the app shell. */
-:root {
-  --bg: var(--hos-bg);
-  --fg: var(--hos-fg);
-  --muted: var(--hos-muted);
-  --card: var(--hos-card);
-  --border: var(--hos-border);
-  --primary: var(--hos-primary);
-  --danger: var(--hos-danger);
+/* App shell base. Component classes live in @healthcare-os/ui;
+ * page-specific layout utilities use Tailwind classes inline. */
+
+* {
+  box-sizing: border-box;
 }
-* { box-sizing: border-box; }
+
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: var(--hos-bg);
+  color: var(--hos-fg);
+  font-family: var(--hos-font-sans);
+  font-size: var(--hos-text-body);
+  line-height: var(--hos-leading-normal);
 }
-.container { max-width: 880px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Legacy aliases during migration — new code uses hos-* classes directly. */
+.container {
+  max-width: 880px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  background: var(--hos-surface);
+  border: 1px solid var(--hos-border);
+  border-radius: var(--hos-radius-md);
+  padding: var(--hos-space-4);
+  margin-bottom: var(--hos-space-4);
 }
-label { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.9rem; }
-input, select, button {
-  font: inherit;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+.error {
+  color: var(--hos-danger);
 }
-button { background: var(--primary); color: #fff; border: none; cursor: pointer; }
-button.secondary { background: #fff; color: var(--fg); border: 1px solid var(--border); }
-.error { color: var(--danger); }
-.muted { color: var(--muted); }
-/* P4.8 a11y: visible only on keyboard focus. */
-.skip-link {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: 100;
-  padding: 0.5rem 0.75rem;
-  background: var(--fg);
-  color: var(--bg);
-  border-radius: 0 0 8px 0;
+.muted {
+  color: var(--hos-text-muted);
 }
-.skip-link:focus {
-  left: 0;
-}
-nav a { margin-right: 1rem; }
-table { width: 100%; border-collapse: collapse; }
-td, th { text-align: left; padding: 0.4rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; }

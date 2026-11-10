@@ -10,6 +10,10 @@ psycopg2-binary~=2.9.10
 python-multipart~=0.0.20
 email-validator~=2.2.0
 httpx~=0.28.0
+# P7: S3-compatible StoragePort adapter (preview MinIO, cloud S3, private S3).
+# Justification: preview requires private object storage; no S3 client exists
+# in the stack, and hand-rolled SigV4 over httpx would be error-prone.
+boto3~=1.43.0
 tzdata~=2026.0
 pytest~=8.3.0
 pytest-cov~=6.0.0

@@ -53,6 +53,8 @@ class P:
     INVENTORY_ADJUST = "inventory.adjust"
     DOCUMENT_READ = "documents.read"
     DOCUMENT_UPLOAD = "documents.upload"
+    PORTAL_READ = "portal.read"
+    PORTAL_APPOINTMENT_CANCEL = "portal.appointment.cancel"
     BRANDING_MANAGE = "branding.manage"
     REPORTS_VIEW = "reports.view"
     REPORTS_EXPORT = "reports.export"
@@ -148,7 +150,7 @@ SEED_ROLES: dict[str, frozenset[str]] = {
     ),
     "accountant": frozenset({P.TENANT_READ, *BILLING_FULL}),
     "staff": frozenset({P.TENANT_READ}),
-    "patient": frozenset(),
+    "patient": frozenset({P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL}),
 }
 
 # Permissions a tenant custom role may never contain.

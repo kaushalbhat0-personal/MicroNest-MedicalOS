@@ -1,9 +1,24 @@
 "use client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  Dialog,
+  EmptyState,
+  Field,
+  Input,
+  LoadingState,
+  Select,
+  Status,
+  Table,
+  Td,
+  Th,
+} from "@healthcare-os/ui";
 import { api } from "@/lib/api";
 import { getSelectedTenant } from "@/lib/tenant";
+import { Shell } from "../shell";
 
 type Appointment = {
   id: string;
@@ -35,6 +50,10 @@ export default function SchedulePage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
+  const [newStart, setNewStart] = useState("");
+  const [newDuration, setNewDuration] = useState("30");
 
   function load(t: string) {
     setLoading(true);
@@ -92,147 +111,288 @@ export default function SchedulePage() {
     }
   }
 
-  async function transition(id: string, action: "status" | "cancel", status?: string) {
+  async function setStatus(id: string, status: string) {
     if (!tenant) return;
     setError("");
     try {
-      if (action === "cancel") {
-        await api.post(`/api/v1/tenants/${tenant}/appointments/${id}/cancel`, {}, tenant);
-      } else {
-        await api.post(
-          `/api/v1/tenants/${tenant}/appointments/${id}/status`,
-          { status },
-          tenant,
-        );
-      }
+      await api.post(
+        `/api/v1/tenants/${tenant}/appointments/${id}/status`,
+        { status },
+        tenant,
+      );
       load(tenant);
     } catch (err) {
       setError((err as Error).message);
     }
   }
 
+  async function cancel(id: string) {
+    if (!tenant) return;
+    setError("");
+    try {
+      await api.post(`/api/v1/tenants/${tenant}/appointments/${id}/cancel`, {}, tenant);
+      load(tenant);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function doReschedule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tenant || !rescheduling) return;
+    setError("");
+    try {
+      await api.patch(
+        `/api/v1/tenants/${tenant}/appointments/${rescheduling.id}`,
+        { start: newStart, duration_minutes: Number(newDuration) },
+        tenant,
+      );
+      setRescheduling(null);
+      setMessage("Appointment rescheduled.");
+      load(tenant);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  const visible = statusFilter ? items.filter((a) => a.status === statusFilter) : items;
+
   return (
-    <>
-      <nav>
-        <Link href="/">Home</Link>
-        <Link href="/team">Team</Link>
-        <Link href="/sessions">Sessions</Link>
-        <Link href="/schedule">Schedule</Link>
-        <Link href="/encounters">Encounters</Link>
-      </nav>
-      <div className="card">
-        <h1>Schedule</h1>
-        {error && (
-          <p id="schedule-error" role="alert" className="error">
+    <Shell>
+      <Card title="Schedule">
+        {error ? (
+          <Alert tone="danger" title="Something went wrong">
             {error}
-          </p>
-        )}
-        {message && <p>{message}</p>}
+          </Alert>
+        ) : null}
+        {message ? <Alert tone="success">{message}</Alert> : null}
+        <Field label="Filter by status" htmlFor="status-filter">
+          {() => (
+            <Select
+              id="status-filter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: "", label: "All statuses" },
+                { value: "scheduled", label: "Scheduled" },
+                { value: "confirmed", label: "Confirmed" },
+                { value: "checked_in", label: "Checked in" },
+                { value: "completed", label: "Completed" },
+                { value: "cancelled", label: "Cancelled" },
+                { value: "no_show", label: "No-show" },
+              ]}
+            />
+          )}
+        </Field>
         {loading ? (
-          <p className="muted">Loading schedule…</p>
-        ) : items.length === 0 ? (
-          <p className="muted">No appointments yet. Book the first one below.</p>
+          <LoadingState label="Loading schedule" />
+        ) : visible.length === 0 ? (
+          <EmptyState title="No appointments yet">Book the first one below.</EmptyState>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((a) => (
-                <tr key={a.id}>
-                  <td>{new Date(a.start_at).toLocaleString()}</td>
-                  <td>{a.status}</td>
-                  <td>
-                    {LIVE.has(a.status) && (
-                      <>
-                        {a.status === "scheduled" && (
-                          <button onClick={() => void transition(a.id, "status", "confirmed")}>
-                            Confirm
-                          </button>
-                        )}{" "}
-                        <button
-                          className="secondary"
-                          onClick={() => void transition(a.id, "cancel")}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <div className="card">
-        <h2>Book appointment</h2>
-        <form onSubmit={create}>
-          <label htmlFor="patient">Patient</label>
-          <select id="patient" value={patientId} onChange={(e) => setPatientId(e.target.value)} required>
-            <option value="" disabled>
-              Select patient
-            </option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.display_name}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="practitioner">Practitioner</label>
-          <select
-            id="practitioner"
-            value={practitionerId}
-            onChange={(e) => setPractitionerId(e.target.value)}
-            required
+          <Table
+            caption="Appointments"
+            density="compact"
+            columns={
+              <>
+                <Th>When</Th>
+                <Th>Status</Th>
+                <Th>Actions</Th>
+              </>
+            }
           >
-            <option value="" disabled>
-              Select practitioner
-            </option>
-            {practitioners.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.display_name}
-              </option>
+            {visible.map((a) => (
+              <tr key={a.id}>
+                <Td>{new Date(a.start_at).toLocaleString()}</Td>
+                <Td>
+                  <Status value={a.status} />
+                </Td>
+                <Td>
+                  {LIVE.has(a.status) && (
+                    <>
+                      {a.status === "scheduled" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void setStatus(a.id, "confirmed")}
+                        >
+                          Confirm
+                        </Button>
+                      )}{" "}
+                      {(a.status === "scheduled" || a.status === "confirmed") && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void setStatus(a.id, "checked_in")}
+                        >
+                          Check in
+                        </Button>
+                      )}{" "}
+                      {a.status === "checked_in" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void setStatus(a.id, "completed")}
+                        >
+                          Complete
+                        </Button>
+                      )}{" "}
+                      {(a.status === "scheduled" || a.status === "confirmed") && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void setStatus(a.id, "no_show")}
+                        >
+                          No-show
+                        </Button>
+                      )}{" "}
+                      {(a.status === "scheduled" || a.status === "confirmed") && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setRescheduling(a);
+                            setNewStart("");
+                            setNewDuration("30");
+                          }}
+                        >
+                          Reschedule
+                        </Button>
+                      )}{" "}
+                      <Button size="sm" variant="secondary" onClick={() => void cancel(a.id)}>
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                </Td>
+              </tr>
             ))}
-          </select>
-          <label htmlFor="location">Location</label>
-          <select id="location" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
-            <option value="" disabled>
-              Select location
-            </option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="start">Start (location time)</label>
-          <input
-            id="start"
-            type="datetime-local"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-            required
-          />
-          <label htmlFor="duration">Duration (minutes)</label>
-          <input
-            id="duration"
-            type="number"
-            min={5}
-            max={480}
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            required
-          />
+          </Table>
+        )}
+      </Card>
+      <Dialog
+        open={rescheduling !== null}
+        onOpenChange={(o) => {
+          if (!o) setRescheduling(null);
+        }}
+        title="Reschedule appointment"
+        description="Pick a new start time. Practitioner overlap is checked server-side."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setRescheduling(null)}>
+              Keep
+            </Button>
+            <Button type="submit" form="reschedule-form">
+              Reschedule
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={doReschedule} id="reschedule-form">
+          <Field label="New start (location time)" htmlFor="new-start" required>
+            {() => (
+              <Input
+                id="new-start"
+                type="datetime-local"
+                value={newStart}
+                onChange={(e) => setNewStart(e.target.value)}
+                required
+              />
+            )}
+          </Field>
+          <Field label="Duration (minutes)" htmlFor="new-duration" required>
+            {() => (
+              <Input
+                id="new-duration"
+                type="number"
+                min={5}
+                max={480}
+                value={newDuration}
+                onChange={(e) => setNewDuration(e.target.value)}
+                required
+              />
+            )}
+          </Field>
+        </form>
+      </Dialog>
+      <Card title="Book appointment">
+        <form onSubmit={create}>
+          <Field label="Patient" htmlFor="patient" required>
+            {() => (
+              <Select
+                id="patient"
+                value={patientId}
+                onChange={(e) => setPatientId(e.target.value)}
+                required
+                options={[
+                  { value: "", label: "Select patient" },
+                  ...patients.map((p) => ({
+                    value: p.id,
+                    label: p.display_name ?? p.id,
+                  })),
+                ]}
+              />
+            )}
+          </Field>
+          <Field label="Practitioner" htmlFor="practitioner" required>
+            {() => (
+              <Select
+                id="practitioner"
+                value={practitionerId}
+                onChange={(e) => setPractitionerId(e.target.value)}
+                required
+                options={[
+                  { value: "", label: "Select practitioner" },
+                  ...practitioners.map((p) => ({
+                    value: p.id,
+                    label: p.display_name ?? p.id,
+                  })),
+                ]}
+              />
+            )}
+          </Field>
+          <Field label="Location" htmlFor="location" required>
+            {() => (
+              <Select
+                id="location"
+                value={locationId}
+                onChange={(e) => setLocationId(e.target.value)}
+                required
+                options={[
+                  { value: "", label: "Select location" },
+                  ...locations.map((l) => ({ value: l.id, label: l.name ?? l.id })),
+                ]}
+              />
+            )}
+          </Field>
+          <Field label="Start (location time)" htmlFor="start" required>
+            {() => (
+              <Input
+                id="start"
+                type="datetime-local"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                required
+              />
+            )}
+          </Field>
+          <Field label="Duration (minutes)" htmlFor="duration" required>
+            {() => (
+              <Input
+                id="duration"
+                type="number"
+                min={5}
+                max={480}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                required
+              />
+            )}
+          </Field>
           <p>
-            <button type="submit">Book</button>
+            <Button type="submit">Book</Button>
           </p>
         </form>
-      </div>
-    </>
+      </Card>
+    </Shell>
   );
 }

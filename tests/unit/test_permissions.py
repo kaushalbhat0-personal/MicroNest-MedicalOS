@@ -29,7 +29,11 @@ def test_seed_roles_reference_known_permissions() -> None:
     known = {v for v in vars(P).values() if isinstance(v, str)}
     for role, perms in SEED_ROLES.items():
         assert perms <= known, role
-    assert "patient" in SEED_ROLES and len(SEED_ROLES["patient"]) == 0
+    # P6 portal: the patient seed role carries exactly the portal allow-list
+    # (portal-scoped reads + own-appointment cancel) and nothing staff-side.
+    assert SEED_ROLES["patient"] == frozenset(
+        {P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL}
+    )
 
 
 def test_custom_role_rejects_unknown() -> None:
