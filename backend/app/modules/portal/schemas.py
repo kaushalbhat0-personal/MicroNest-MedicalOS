@@ -17,7 +17,41 @@ class PortalPatient(BaseModel):
     id: uuid.UUID
     display_name: str
     phone: str | None
+    email: str | None = None
     is_active: bool
+
+
+class PortalBookableLocation(BaseModel):
+    id: uuid.UUID
+    name: str
+    timezone: str
+
+
+class PortalBookablePractitioner(BaseModel):
+    id: uuid.UUID
+    display_name: str
+
+
+class PortalAvailabilitySlot(BaseModel):
+    start_at: datetime
+    end_at: datetime
+
+
+class PortalAvailability(BaseModel):
+    practitioner_id: uuid.UUID
+    location_id: uuid.UUID
+    timezone: str
+    date: str
+    slot_minutes: int
+    slots: list[PortalAvailabilitySlot]
+
+
+class PortalAppointmentBook(BaseModel):
+    practitioner_id: uuid.UUID
+    location_id: uuid.UUID
+    start: datetime
+    duration_minutes: int = Field(default=30, ge=5, le=480)
+    idempotency_key: str | None = Field(default=None, max_length=64)
 
 
 class PortalMe(BaseModel):
@@ -244,3 +278,34 @@ class PortalLinkResponse(BaseModel):
 class PortalWorkspaces(BaseModel):
     provider: bool
     portal: bool
+
+
+class PortalOverview(BaseModel):
+    display_name: str
+    phone: str | None
+    email: str | None
+    date_of_birth: str | None = None
+    is_active: bool
+    last_visit_at: datetime | None = None
+    next_appointment_at: datetime | None = None
+    next_appointment_id: uuid.UUID | None = None
+    outstanding_balance: str
+    currency: str
+    follow_up_due: str | None = None
+
+
+class PortalTimelineItem(BaseModel):
+    event_id: str
+    kind: str
+    category: str
+    occurred_at: datetime
+    title: str
+    summary: str | None = None
+    resource_type: str
+    resource_id: uuid.UUID
+    status: str | None = None
+
+
+class PortalTimelinePage(BaseModel):
+    items: list[PortalTimelineItem]
+    next_cursor: str | None = None

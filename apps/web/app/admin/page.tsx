@@ -65,16 +65,27 @@ type TenantDetail = {
   specialties: SpecialtyDetail[];
 };
 
+type VerificationRow = {
+  practitioner_id: string;
+  display_name: string;
+  status: string;
+  reason: string | null;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const locations = useTenantApi<Location[]>((t) => `/api/v1/tenants/${t}/locations`);
   const roles = useTenantApi<Role[]>((t) => `/api/v1/tenants/${t}/roles`);
   const audit = useTenantApi<AuditEvent[]>((t) => `/api/v1/tenants/${t}/audit?limit=50`);
   const detail = useTenantApi<TenantDetail>((t) => `/api/v1/tenants/${t}`);
+  const verification = useTenantApi<VerificationRow[]>((t) => `/api/v1/tenants/${t}/verification`);
   const [locName, setLocName] = useState("");
   const [locTz, setLocTz] = useState("Asia/Kolkata");
   const [roleName, setRoleName] = useState("");
   const [rolePerms, setRolePerms] = useState("tenant.read, appointment.read");
+  const [practName, setPractName] = useState("");
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState("");
 
   if (!locations.loading && !locations.tenant && typeof window !== "undefined") {
     router.push("/");
@@ -111,12 +122,56 @@ export default function AdminPage() {
     }
   }
 
+  async function registerPractitioner(e: React.FormEvent) {
+    e.preventDefault();
+    const t = getSelectedTenant();
+    if (!t) return;
+    setVerifyMsg("");
+    setVerifyBusy(true);
+    try {
+      await api.post(`/api/v1/tenants/${t}/practitioners`, { display_name: practName }, t);
+      setPractName("");
+      setVerifyMsg("Practitioner registered as pending.");
+      verification.reload();
+    } catch (err) {
+      verification.setError((err as Error).message);
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
+  async function setVerificationStatus(practitionerId: string, status: "approved" | "rejected") {
+    const t = getSelectedTenant();
+    if (!t) return;
+    setVerifyMsg("");
+    setVerifyBusy(true);
+    try {
+      await api.post(
+        `/api/v1/tenants/${t}/verification`,
+        { practitioner_id: practitionerId, status },
+        t,
+      );
+      setVerifyMsg(`Practitioner ${status}.`);
+      verification.reload();
+    } catch (err) {
+      verification.setError((err as Error).message);
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
   return (
     <Shell>
       <PageHeader
         title="Clinic administration"
-        description="Locations, roles, and the audit trail."
-        actions={<Link href="/team">Team</Link>}
+        description="Locations, practitioner approval, roles, and the audit trail."
+        actions={
+          <>
+            <Link href="/onboarding">Setup</Link>
+            {" · "}
+            <Link href="/team">Team</Link>
+          </>
+        }
       />
       {detail.loading ? (
         <LoadingState label="Loading subscription" />
@@ -151,7 +206,7 @@ export default function AdminPage() {
                 </p>
                 {sub.limits ? (
                   <p className="hos-helper">
-                    Plan limits (informational only, not enforced):{" "}
+                    Plan limits (capacity enforced):{" "}
                     {sub.limits.max_locations} locations ·{" "}
                     {sub.limits.max_practitioners} practitioners ·{" "}
                     {sub.limits.max_staff_seats} seats.
@@ -209,6 +264,102 @@ export default function AdminPage() {
           {locations.error}
         </Alert>
       ) : null}
+      <Card title="Practitioner verification">
+        <p className="hos-helper">
+          Pending practitioners cannot be selected for booking until approved. Approval requires{" "}
+          <code>staff.manage</code>. You cannot approve yourself through a UI-only check — the server
+          enforces permissions.
+        </p>
+        {verification.error ? (
+          <Alert tone="danger" title="Verification unavailable">
+            {verification.error}
+          </Alert>
+        ) : null}
+        {verifyMsg ? (
+          <Alert tone="success" title="Updated">
+            {verifyMsg}
+          </Alert>
+        ) : null}
+        {verification.loading ? (
+          <LoadingState label="Loading practitioners" />
+        ) : (verification.data ?? []).length === 0 ? (
+          <EmptyState title="No verification records yet" />
+        ) : (
+          <Table
+            caption="Practitioner verification"
+            density="compact"
+            columns={
+              <>
+                <Th>Name</Th>
+                <Th>Status</Th>
+                <Th>Actions</Th>
+              </>
+            }
+          >
+            {(verification.data ?? []).map((v) => (
+              <tr key={v.practitioner_id}>
+                <Td>{v.display_name}</Td>
+                <Td>
+                  <Badge
+                    tone={
+                      v.status === "approved"
+                        ? "success"
+                        : v.status === "rejected"
+                          ? "danger"
+                          : "warning"
+                    }
+                  >
+                    {v.status}
+                  </Badge>
+                </Td>
+                <Td>
+                  <div className="hos-row-actions">
+                    {v.status !== "approved" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        loading={verifyBusy}
+                        onClick={() => void setVerificationStatus(v.practitioner_id, "approved")}
+                      >
+                        Approve
+                      </Button>
+                    ) : null}
+                    {v.status !== "rejected" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        loading={verifyBusy}
+                        onClick={() => void setVerificationStatus(v.practitioner_id, "rejected")}
+                      >
+                        Reject
+                      </Button>
+                    ) : null}
+                  </div>
+                </Td>
+              </tr>
+            ))}
+          </Table>
+        )}
+        <form onSubmit={registerPractitioner}>
+          <Field label="Register practitioner display name" htmlFor="pract-name" required>
+            {() => (
+              <Input
+                id="pract-name"
+                value={practName}
+                onChange={(e) => setPractName(e.target.value)}
+                required
+                minLength={2}
+              />
+            )}
+          </Field>
+          <p>
+            <Button type="submit" variant="secondary" loading={verifyBusy}>
+              Register as pending
+            </Button>
+          </p>
+        </form>
+      </Card>
       <Card title="Locations">
         {locations.loading ? (
           <LoadingState label="Loading locations" />

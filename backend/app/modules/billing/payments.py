@@ -311,6 +311,11 @@ def create_payment(
 ) -> Payment:
     """Record money received. Status starts `recorded`; allocation moves it.
     Provider facts stay opaque inside `provider_data` (never queried)."""
+    from app.modules.subscriptions.commercial_policy import assert_feature
+
+    assert_feature(
+        db, tenant_id=tenant_id, feature_key="clinic_billing", operation="payment.create"
+    )
     moneylib.validate_currency(currency)
     _validate_refs(
         db,

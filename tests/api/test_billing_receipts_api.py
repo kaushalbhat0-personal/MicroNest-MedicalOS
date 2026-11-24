@@ -64,6 +64,15 @@ def test_create_and_read_receipt(
     fetched = doc.get(f"/api/v1/tenants/{tid}/receipts/{rid}", headers=h)
     assert fetched.status_code == 200, fetched.text
     assert fetched.json() == body
+    # API contract: created_at is UTC with trailing Z on create and read —
+    # never a host-local offset (regression: Windows IST +05:30 vs Z).
+    for payload in (body, fetched.json()):
+        created_at = payload["created_at"]
+        assert isinstance(created_at, str)
+        assert created_at.endswith("Z"), created_at
+        assert "+05:30" not in created_at
+        assert "+00:00" not in created_at
+    assert body["created_at"] == fetched.json()["created_at"]
     # Error envelope is RFC-7807.
     missing = doc.get(
         f"/api/v1/tenants/{tid}/receipts/00000000-0000-0000-0000-000000000000",

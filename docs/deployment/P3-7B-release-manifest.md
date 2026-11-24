@@ -1,0 +1,178 @@
+# P3.7B Release Manifest
+
+**Branch:** `release/p3-7b-staging`  
+**Base:** `2a0974e41af9e334e147794f45e258f34d6814d3`  
+**File count:** 164
+
+## Included paths
+
+- `DESIGN.md` — backend/runtime
+- `apps/web/app/admin/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/follow-ups/` — web/UI companion for API surfaces
+- `apps/web/app/inventory/` — web/UI companion for API surfaces
+- `apps/web/app/invite/` — web/UI companion for API surfaces
+- `apps/web/app/login/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/onboarding/` — web/UI companion for API surfaces
+- `apps/web/app/operations/` — web/UI companion for API surfaces
+- `apps/web/app/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/password-reset/` — web/UI companion for API surfaces
+- `apps/web/app/patients/[id]/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/patients/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/plans/` — web/UI companion for API surfaces
+- `apps/web/app/platform/tenants/[id]/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/portal/appointments/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/portal/dental/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/portal/profile/` — web/UI companion for API surfaces
+- `apps/web/app/portal/shell.tsx` — web/UI companion for API surfaces
+- `apps/web/app/reception/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/schedule/page.tsx` — web/UI companion for API surfaces
+- `apps/web/app/shell.tsx` — web/UI companion for API surfaces
+- `apps/web/app/staff/` — web/UI companion for API surfaces
+- `apps/web/app/subscription/` — web/UI companion for API surfaces
+- `apps/web/app/team/page.tsx` — web/UI companion for API surfaces
+- `apps/web/e2e/` — web/UI companion for API surfaces
+- `apps/web/lib/api.ts` — web/UI companion for API surfaces
+- `apps/web/lib/nav.test.ts` — web/UI companion for API surfaces
+- `apps/web/lib/nav.ts` — web/UI companion for API surfaces
+- `apps/web/lib/portal.ts` — web/UI companion for API surfaces
+- `apps/web/lib/shareLinks.test.ts` — web/UI companion for API surfaces
+- `apps/web/lib/shareLinks.ts` — web/UI companion for API surfaces
+- `apps/web/lib/workspace.ts` — web/UI companion for API surfaces
+- `apps/web/next.config.mjs` — web/UI companion for API surfaces
+- `apps/web/package.json` — web/UI companion for API surfaces
+- `apps/web/playwright.config.ts` — web/UI companion for API surfaces
+- `backend/alembic/env.py` — backend/runtime
+- `backend/alembic/versions/0018_patient_crm_availability.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0019_queue_tokens.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0020_followups_comms.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0021_inventory.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0022_staff.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0023_subscription_foundation.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0024_entitlement_feature_normalize.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0025_trial_feature_eval.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0026_saas_payments.py` — schema migration (0018–0027 chain)
+- `backend/alembic/versions/0027_saas_payment_reliability.py` — schema migration (0018–0027 chain)
+- `backend/app/api/v1/communications.py` — backend/runtime
+- `backend/app/api/v1/inventory.py` — backend/runtime
+- `backend/app/api/v1/invites.py` — backend/runtime
+- `backend/app/api/v1/operations.py` — backend/runtime
+- `backend/app/api/v1/patients.py` — backend/runtime
+- `backend/app/api/v1/portal.py` — backend/runtime
+- `backend/app/api/v1/router.py` — backend/runtime
+- `backend/app/api/v1/saas_payments.py` — backend/runtime
+- `backend/app/api/v1/scheduling.py` — backend/runtime
+- `backend/app/api/v1/staff.py` — backend/runtime
+- `backend/app/api/v1/subscriptions.py` — backend/runtime
+- `backend/app/api/v1/tenants.py` — backend/runtime
+- `backend/app/modules/billing/estimates.py` — backend/runtime
+- `backend/app/modules/billing/invoices.py` — backend/runtime
+- `backend/app/modules/billing/payments.py` — backend/runtime
+- `backend/app/modules/billing/schemas.py` — backend/runtime
+- `backend/app/modules/clinical/service.py` — backend/runtime
+- `backend/app/modules/clinics/models.py` — backend/runtime
+- `backend/app/modules/clinics/service.py` — backend/runtime
+- `backend/app/modules/communications/` — backend/runtime
+- `backend/app/modules/dental/plans.py` — backend/runtime
+- `backend/app/modules/dental/schemas.py` — backend/runtime
+- `backend/app/modules/identity/schemas.py` — backend/runtime
+- `backend/app/modules/inventory/__init__.py` — backend/runtime
+- `backend/app/modules/inventory/models.py` — backend/runtime
+- `backend/app/modules/inventory/schemas.py` — backend/runtime
+- `backend/app/modules/inventory/service.py` — backend/runtime
+- `backend/app/modules/operations/` — backend/runtime
+- `backend/app/modules/patients/models.py` — backend/runtime
+- `backend/app/modules/patients/schemas.py` — backend/runtime
+- `backend/app/modules/patients/service.py` — backend/runtime
+- `backend/app/modules/patients/timeline.py` — backend/runtime
+- `backend/app/modules/portal/schemas.py` — backend/runtime
+- `backend/app/modules/portal/service.py` — backend/runtime
+- `backend/app/modules/prescriptions/service.py` — backend/runtime
+- `backend/app/modules/saas_payments/` — backend/runtime
+- `backend/app/modules/scheduling/models.py` — backend/runtime
+- `backend/app/modules/scheduling/schemas.py` — backend/runtime
+- `backend/app/modules/scheduling/service.py` — backend/runtime
+- `backend/app/modules/staff/` — backend/runtime
+- `backend/app/modules/subscriptions/__init__.py` — backend/runtime
+- `backend/app/modules/subscriptions/commercial_policy.py` — backend/runtime
+- `backend/app/modules/subscriptions/enforcement.py` — backend/runtime
+- `backend/app/modules/subscriptions/entitlements.py` — backend/runtime
+- `backend/app/modules/subscriptions/models.py` — backend/runtime
+- `backend/app/modules/subscriptions/schemas.py` — backend/runtime
+- `backend/app/modules/subscriptions/service.py` — backend/runtime
+- `backend/app/modules/tenancy/models.py` — backend/runtime
+- `backend/app/modules/tenancy/schemas.py` — backend/runtime
+- `backend/app/modules/tenancy/service.py` — backend/runtime
+- `backend/app/modules/workspaces/service.py` — backend/runtime
+- `backend/app/platform/authz/permissions.py` — backend/runtime
+- `backend/app/platform/config.py` — backend/runtime
+- `backend/app/platform/db.py` — backend/runtime
+- `backend/app/platform/errors.py` — backend/runtime
+- `backend/app/platform/ops.py` — backend/runtime
+- `backend/app/platform/time.py` — backend/runtime
+- `docs/commercial/p15-commercial-readiness.md` — release evidence/docs
+- `docs/commercial/p20-subscription-foundation.md` — release evidence/docs
+- `docs/commercial/p21-entitlement-shadow.md` — release evidence/docs
+- `docs/commercial/p22-entitlement-enforcement.md` — release evidence/docs
+- `docs/commercial/p23-commercial-state-and-feature-enforcement.md` — release evidence/docs
+- `docs/commercial/p24-payment-provider-integration.md` — release evidence/docs
+- `docs/commercial/p25-payment-reliability.md` — release evidence/docs
+- `docs/deployment/` — release evidence/docs
+- `docs/pilot-readiness/` — release evidence/docs
+- `docs/product/clinic-erp-crm-gap-audit/` — release evidence/docs
+- `docs/product/operations-dashboard-metrics.md` — release evidence/docs
+- `docs/product/p15-operations-e2e.md` — release evidence/docs
+- `docs/security/P3-4-whatsapp-sharing-review.md` — release evidence/docs
+- `docs/security/P3-6-dental-consent-report.md` — release evidence/docs
+- `docs/security/P3-6-document-isolation-report.md` — release evidence/docs
+- `docs/security/P3-6-remediation-report.md` — release evidence/docs
+- `docs/security/P3-6-tenant-isolation-report.md` — release evidence/docs
+- `docs/security/P3-6-threat-model.md` — release evidence/docs
+- `docs/security/P3-7A-supabase-storage-isolation.md` — release evidence/docs
+- `package-lock.json` — backend/runtime
+- `packages/ui/WhatsAppShareAction.tsx` — web/UI companion for API surfaces
+- `packages/ui/components.css` — web/UI companion for API surfaces
+- `packages/ui/feedback.tsx` — web/UI companion for API surfaces
+- `packages/ui/index.ts` — web/UI companion for API surfaces
+- `packages/ui/navigation.tsx` — web/UI companion for API surfaces
+- `packages/ui/package.json` — web/UI companion for API surfaces
+- `packages/ui/whatsapp.test.mjs` — web/UI companion for API surfaces
+- `packages/ui/whatsapp.ts` — web/UI companion for API surfaces
+- `tests/api/test_availability_api.py` — regression/security tests
+- `tests/api/test_billing_receipts_api.py` — regression/security tests
+- `tests/api/test_commercial_p23.py` — regression/security tests
+- `tests/api/test_dental_api.py` — regression/security tests
+- `tests/api/test_document_access_api.py` — regression/security tests
+- `tests/api/test_entitlements_p21.py` — regression/security tests
+- `tests/api/test_entitlements_p22_enforcement.py` — regression/security tests
+- `tests/api/test_followups_comms.py` — regression/security tests
+- `tests/api/test_inventory.py` — regression/security tests
+- `tests/api/test_o13r_visibility.py` — regression/security tests
+- `tests/api/test_o15r_two_pilot_e2e.py` — regression/security tests
+- `tests/api/test_operations_dashboard.py` — regression/security tests
+- `tests/api/test_patient_360.py` — regression/security tests
+- `tests/api/test_patients_api.py` — regression/security tests
+- `tests/api/test_reception_queue.py` — regression/security tests
+- `tests/api/test_saas_payments_p24.py` — regression/security tests
+- `tests/api/test_saas_payments_p25.py` — regression/security tests
+- `tests/api/test_staff.py` — regression/security tests
+- `tests/api/test_subscriptions_p20.py` — regression/security tests
+- `tests/api/test_tenants_api.py` — regression/security tests
+- `tests/api/test_workspaces_api.py` — regression/security tests
+- `tests/conftest.py` — regression/security tests
+- `tests/contract/test_openapi.py` — regression/security tests
+- `tests/helpers.py` — regression/security tests
+- `tests/portal/test_portal_booking.py` — regression/security tests
+- `tests/portal/test_portal_flows.py` — regression/security tests
+- `tests/security/` — regression/security tests
+- `tests/security/test_p36_document_consent_isolation.py` — regression/security tests
+- `tests/service/test_outstanding_aggregate_reconcile.py` — regression/security tests
+- `tests/service/test_rx_dental.py` — regression/security tests
+- `tests/unit/test_ids_time.py` — regression/security tests
+- `tests/unit/test_permissions.py` — regression/security tests
+- `tests/unit/test_whatsapp_link.py` — regression/security tests
+
+## Explicitly excluded
+
+- `.env` and all secrets
+- `scripts/_p37a_*` / `scripts/_p37b_*` local ops helpers
+- Playwright reports, caches, venvs, node_modules

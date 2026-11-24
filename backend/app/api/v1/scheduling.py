@@ -12,7 +12,7 @@ Domain rules (transitions, overlap, timezone) live in the service, never here.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session as DBSession
@@ -58,12 +58,43 @@ def _resp(a: Appointment) -> S.AppointmentResponse:
         timezone=a.timezone,
         status=a.status,
         notes=a.notes,
+        queue_token=a.queue_token,
+        queue_date=a.queue_date,
         cancelled_at=a.cancelled_at,
         cancelled_by=a.cancelled_by,
         cancel_reason=a.cancel_reason,
         created_at=a.created_at,
         updated_at=a.updated_at,
     )
+
+
+def _bucket_queue(
+    items: list[Appointment],
+) -> tuple[
+    list[S.AppointmentResponse],
+    list[S.AppointmentResponse],
+    list[S.AppointmentResponse],
+    list[S.AppointmentResponse],
+    list[S.AppointmentResponse],
+]:
+    waiting: list[S.AppointmentResponse] = []
+    checked_in: list[S.AppointmentResponse] = []
+    completed: list[S.AppointmentResponse] = []
+    no_show: list[S.AppointmentResponse] = []
+    cancelled: list[S.AppointmentResponse] = []
+    for a in items:
+        row = _resp(a)
+        if a.status in ("scheduled", "confirmed"):
+            waiting.append(row)
+        elif a.status == "checked_in":
+            checked_in.append(row)
+        elif a.status == "completed":
+            completed.append(row)
+        elif a.status == "no_show":
+            no_show.append(row)
+        elif a.status == "cancelled":
+            cancelled.append(row)
+    return waiting, checked_in, completed, no_show, cancelled
 
 
 @router.post("/tenants/{tenant_id}/appointments", response_model=S.AppointmentResponse)
@@ -88,6 +119,7 @@ def create_appointment(
         notes=body.notes,
         idempotency_key=idempotency_key or body.idempotency_key,
         location_ids=ctx.location_ids,
+        walk_in=body.walk_in,
     )
     _audit(db, ctx, action="appointment.create", rid=str(appt.id))
     patient = patients_service.get_patient(db, tenant_id=tenant_id, patient_id=appt.patient_id)
@@ -113,6 +145,7 @@ def list_appointments(
     db: DBSession = Depends(get_db),  # noqa: B008
     practitioner_id: uuid.UUID | None = None,
     location_id: uuid.UUID | None = None,
+    patient_id: uuid.UUID | None = None,
     status: str | None = None,
     start_from: datetime | None = None,
     start_to: datetime | None = None,
@@ -126,6 +159,7 @@ def list_appointments(
         location_ids=ctx.location_ids,
         practitioner_id=practitioner_id,
         location_id=location_id,
+        patient_id=patient_id,
         status=status,
         start_from=start_from,
         start_to=start_to,
@@ -133,6 +167,68 @@ def list_appointments(
         cursor=cursor,
     )
     return S.AppointmentListResponse(items=[_resp(a) for a in items], next_cursor=next_cursor)
+
+
+@router.get(
+    "/tenants/{tenant_id}/locations/{location_id}/reception-queue",
+    response_model=S.ReceptionQueueResponse,
+)
+def reception_queue(
+    tenant_id: uuid.UUID,
+    location_id: uuid.UUID,
+    day: date | None = None,
+    practitioner_id: uuid.UUID | None = None,
+    ctx: RequestContext = Depends(require(P.APPOINTMENT_READ)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.ReceptionQueueResponse:
+    match_tenant(ctx, tenant_id)
+    location, queue_date, items = sched.reception_queue(
+        db,
+        tenant_id=tenant_id,
+        location_id=location_id,
+        queue_date=day,
+        practitioner_id=practitioner_id,
+        location_ids=ctx.location_ids,
+    )
+    waiting, checked_in, completed, no_show, cancelled = _bucket_queue(items)
+    return S.ReceptionQueueResponse(
+        location_id=location.id,
+        queue_date=queue_date,
+        timezone=location.timezone,
+        waiting=waiting,
+        checked_in=checked_in,
+        completed=completed,
+        no_show=no_show,
+        cancelled=cancelled,
+    )
+
+
+@router.get("/tenants/{tenant_id}/availability", response_model=S.AvailabilityResponse)
+def staff_availability(
+    tenant_id: uuid.UUID,
+    practitioner_id: uuid.UUID,
+    location_id: uuid.UUID,
+    day: date,
+    ctx: RequestContext = Depends(require(P.APPOINTMENT_READ)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.AvailabilityResponse:
+    match_tenant(ctx, tenant_id)
+    tz_name, slot_minutes, slots = sched.list_free_slots(
+        db,
+        tenant_id=tenant_id,
+        practitioner_id=practitioner_id,
+        location_id=location_id,
+        day=day,
+        location_ids=ctx.location_ids,
+    )
+    return S.AvailabilityResponse(
+        practitioner_id=practitioner_id,
+        location_id=location_id,
+        timezone=tz_name,
+        date=day.isoformat(),
+        slot_minutes=slot_minutes,
+        slots=[S.AvailabilitySlot(start_at=s, end_at=e) for s, e in slots],
+    )
 
 
 @router.get(

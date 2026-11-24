@@ -98,6 +98,10 @@ export default function LoginPage() {
         </form>
         <p className="hos-helper">
           New here? <Link href="/signup">Create an account</Link>
+          {" · "}
+          <Link href="/password-reset">Reset password</Link>
+          {" · "}
+          <Link href="/invite">Accept invitation</Link>
         </p>
       </Card>
     </main>

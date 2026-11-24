@@ -56,8 +56,25 @@ export {
   srOnlyStyle,
   type DataTableProps,
 } from "./data";
-export { SkipLink, AppShell, PageHeader, type NavItem } from "./navigation";
+export {
+  SkipLink,
+  AppShell,
+  PageHeader,
+  isNavActive,
+  type NavItem,
+  type AppShellVariant,
+} from "./navigation";
 export { PatientIdentityHeader, MoneyDisplay, FinancialSummary } from "./healthcare";
+export {
+  WhatsAppShareAction,
+  type WhatsAppShareActionProps,
+} from "./WhatsAppShareAction";
+export {
+  buildWhatsAppUrl,
+  isValidWhatsAppPhone,
+  normalizeWhatsAppNumber,
+  WhatsAppPhoneError,
+} from "./whatsapp";
 export { Odontogram, PERMANENT_TEETH, type ToothState } from "./dental";
 export { ClinicalImageViewer, type ViewerImage, type ViewerImageMeta, type ViewerStatus, type ClinicalImageViewerProps } from "./imaging";
 export {

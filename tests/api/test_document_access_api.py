@@ -35,7 +35,6 @@ def _open(c, tid, b, location=None):  # type: ignore[no-untyped-def]
 def _image_ref(c, tid, encounter_id, h, **kw):  # type: ignore[no-untyped-def]
     body = {
         "doc_type": "xray",
-        "storage_key": f"t/x/{uuid.uuid4().hex[:8]}.png",
         "content_type": "image/png",
         "sha256": "abc123",
     }
@@ -46,7 +45,9 @@ def _image_ref(c, tid, encounter_id, h, **kw):  # type: ignore[no-untyped-def]
         headers=h,
     )
     assert r.status_code == 200, r.text
-    return r.json()
+    body_out = r.json()
+    assert body_out["storage_key"].startswith(f"tenants/{tid}/encounters/{encounter_id}/documents/")
+    return body_out
 
 
 def _access(c, tid, document_id, h, json=None):  # type: ignore[no-untyped-def]

@@ -75,6 +75,9 @@ def create_plan(
     notes: str | None = None,
     location_ids: frozenset[uuid.UUID] | None = None,
 ) -> TreatmentPlan:
+    from app.modules.subscriptions.commercial_policy import assert_business_create
+
+    assert_business_create(db, tenant_id=tenant_id, operation="treatment_plan.create")
     _scope_check(
         db,
         tenant_id=tenant_id,
@@ -375,6 +378,29 @@ RECORD_TRANSITIONS: dict[str, frozenset[str]] = {
 }
 
 
+# Clinical safety gate (P3.0 / P3.6): advancing a procedure into active care
+# requires a granted consent bound to that procedure record. Cancel remains
+# ungated. Plan-activation hard-gating is intentionally out of scope until a
+# qualified dental professional confirms that policy.
+_CONSENT_GATED_RECORD_STATUSES = frozenset({M.RECORD_IN_PROGRESS, M.RECORD_COMPLETED})
+
+
+def _require_granted_procedure_consent(
+    db: DBSession, *, tenant_id: uuid.UUID, procedure_record_id: uuid.UUID
+) -> None:
+    row = db.execute(
+        select(Consent.id)
+        .where(
+            Consent.tenant_id == tenant_id,
+            Consent.procedure_record_id == procedure_record_id,
+            Consent.status == M.CONSENT_GRANTED,
+        )
+        .limit(1)
+    ).first()
+    if row is None:
+        raise ForbiddenError("procedure requires granted consent")
+
+
 def transition_procedure_record(
     db: DBSession,
     *,
@@ -393,6 +419,10 @@ def transition_procedure_record(
         return record
     if to_status not in RECORD_TRANSITIONS[record.status]:
         raise ValidationError(f"cannot move procedure record from {record.status} to {to_status}")
+    if to_status in _CONSENT_GATED_RECORD_STATUSES:
+        _require_granted_procedure_consent(
+            db, tenant_id=tenant_id, procedure_record_id=record.id
+        )
     now = _now()
     record.status = to_status
     if to_status == M.RECORD_COMPLETED:
@@ -676,6 +706,7 @@ def grant_document_access(
     _encounter_in_scope(
         db, tenant_id=tenant_id, encounter_id=ref.encounter_id, location_ids=location_ids
     )
+    _assert_document_storage_bound(ref, tenant_id=tenant_id)
     if not _is_image_content(ref.content_type):
         raise ValidationError("document is not an eligible image")
     return ref
@@ -686,6 +717,39 @@ def grant_document_access(
 DOC_TYPES = frozenset({"xray", "scan", "photo", "report", "other"})
 
 
+def allocate_document_storage_key(
+    *, tenant_id: uuid.UUID, encounter_id: uuid.UUID, document_id: uuid.UUID
+) -> str:
+    """Server-owned object path. Never accept a client-supplied key for selection."""
+    return f"tenants/{tenant_id}/encounters/{encounter_id}/documents/{document_id}"
+
+
+def _assert_storage_key_safe(key: str) -> None:
+    """Reject path traversal / absolute / empty client hints. Assignment still
+    ignores the hint — this only fails closed on malformed input."""
+    stripped = (key or "").strip()
+    if not stripped:
+        return
+    if ".." in stripped or stripped.startswith("/") or "\\" in stripped or "\0" in stripped:
+        raise ValidationError("invalid storage key")
+
+
+def _assert_document_storage_bound(
+    ref: DocumentReference, *, tenant_id: uuid.UUID
+) -> None:
+    """Fail closed if a stored key is not tenant-bound (legacy poison / drift)."""
+    key = ref.storage_key or ""
+    prefix = f"tenants/{tenant_id}/"
+    if (
+        not key.startswith(prefix)
+        or ".." in key
+        or key.startswith("/")
+        or "\\" in key
+        or "\0" in key
+    ):
+        raise ValidationError("document storage key is invalid")
+
+
 def create_document_ref(
     db: DBSession,
     *,
@@ -693,7 +757,7 @@ def create_document_ref(
     encounter_id: uuid.UUID,
     actor_id: uuid.UUID,
     doc_type: str = "other",
-    storage_key: str,
+    storage_key: str | None = None,
     content_type: str | None = None,
     size_bytes: int | None = None,
     sha256: str | None = None,
@@ -706,12 +770,15 @@ def create_document_ref(
     dtype = (doc_type or "other").strip().lower()
     if dtype not in DOC_TYPES:
         raise ValidationError(f"unsupported document type: {doc_type}")
-    key = (storage_key or "").strip()
-    if not key:
-        raise ValidationError("storage key is required")
+    # Client may still send a legacy storage_key hint; it never selects the object.
+    _assert_storage_key_safe(storage_key or "")
     now = _now()
+    doc_id = ids.uuid7()
+    key = allocate_document_storage_key(
+        tenant_id=tenant_id, encounter_id=encounter_id, document_id=doc_id
+    )
     ref = DocumentReference(
-        id=ids.uuid7(),
+        id=doc_id,
         tenant_id=tenant_id,
         encounter_id=encounter_id,
         doc_type=dtype,

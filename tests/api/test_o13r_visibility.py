@@ -407,7 +407,14 @@ def test_trial_plan_code_is_unique(owner_db) -> None:  # type: ignore[no-untyped
         SubscriptionPlan(
             id=uuid.uuid4(),
             code="trial-14d",
+            family_code="trial-14d",
+            version=1,
             name="Duplicate",
+            description="",
+            currency="INR",
+            billing_interval=None,
+            price_minor=0,
+            features={},
             max_locations=1,
             max_practitioners=1,
             max_staff_seats=1,
@@ -425,9 +432,12 @@ def test_trial_plan_code_is_unique(owner_db) -> None:  # type: ignore[no-untyped
 def test_repeated_seed_execution_creates_no_duplicates(owner_db) -> None:  # type: ignore[no-untyped-def]
     seed = (
         "INSERT INTO subscription_plans "
-        "(id, code, name, max_locations, max_practitioners, max_staff_seats, "
+        "(id, code, name, family_code, version, description, currency, "
+        " billing_interval, price_minor, features, "
+        " max_locations, max_practitioners, max_staff_seats, "
         " trial_days, is_active, created_at, updated_at) "
-        "VALUES (gen_random_uuid(), 'trial-14d', 'Trial (14-day)', "
+        "VALUES (gen_random_uuid(), 'trial-14d', 'Trial (14-day)', 'trial-14d', 1, "
+        " '', 'INR', NULL, 0, '{}'::jsonb, "
         " 3, 10, 25, 14, true, now(), now()) "
         "ON CONFLICT (code) DO NOTHING"
     )
@@ -594,8 +604,13 @@ def test_no_cross_ledger_foreign_keys(owner_db) -> None:  # type: ignore[no-unty
     assert "patient_subscriptions" not in names
     assert "subscription_invoices" not in names
     assert "subscription_payments" not in names
-    plans = owner_db.execute(text("SELECT code FROM subscription_plans")).all()
-    assert [r[0] for r in plans] == ["trial-14d"]
+    plans = {
+        r[0]
+        for r in owner_db.execute(text("SELECT code FROM subscription_plans")).all()
+    }
+    # P2.0 catalog may include starter/growth; trial always present.
+    assert "trial-14d" in plans
+    assert plans >= {"trial-14d"}
 
 
 def test_portal_enrollment_needs_no_subscription(  # type: ignore[no-untyped-def]

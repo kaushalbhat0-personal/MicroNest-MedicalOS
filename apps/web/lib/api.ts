@@ -1,4 +1,4 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type ApiError = { type: string; title: string; status: number; detail: string };
 
@@ -26,8 +26,22 @@ export const api = {
   get: <T>(path: string, tenantId?: string) => request<T>(path, { method: "GET" }, tenantId),
   post: <T>(path: string, payload?: unknown, tenantId?: string) =>
     request<T>(path, { method: "POST", body: JSON.stringify(payload ?? {}) }, tenantId),
+  /** POST with extra headers (e.g. Idempotency-Key for workspace create). */
+  postHeaders: <T>(
+    path: string,
+    payload: unknown,
+    headers: Record<string, string>,
+    tenantId?: string,
+  ) =>
+    request<T>(
+      path,
+      { method: "POST", body: JSON.stringify(payload ?? {}), headers },
+      tenantId,
+    ),
   patch: <T>(path: string, payload?: unknown, tenantId?: string) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(payload ?? {}) }, tenantId),
+  put: <T>(path: string, payload?: unknown, tenantId?: string) =>
+    request<T>(path, { method: "PUT", body: JSON.stringify(payload ?? {}) }, tenantId),
   del: <T>(path: string, tenantId?: string) => request<T>(path, { method: "DELETE" }, tenantId),
 };
 

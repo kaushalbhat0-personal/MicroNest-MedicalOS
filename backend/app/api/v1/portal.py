@@ -68,6 +68,7 @@ from app.modules.dental.plans import (
 )
 from app.modules.identity.models import User
 from app.modules.patients import service as patients_service
+from app.modules.patients import timeline as patient_timeline
 from app.modules.patients.models import Patient
 from app.modules.portal import schemas as S
 from app.modules.portal import service as portal_service
@@ -103,10 +104,19 @@ def portal_ctx(
 ) -> PortalContext:
     """Resolve the caller's single authorized patient context.
 
-    Membership + `portal.read` pass first (existing machinery), then the
-    portal link pins ownership. Any failure is 404: a portal caller without
-    a link learns nothing about tenant structure.
+    Axes (independent):
+    1. Session auth + ``portal.read`` membership (RBAC).
+    2. Abuse/security: ``get_ctx`` requires ``tenants.status == active``.
+    3. Plan feature ``patient_portal`` (commercial catalog).
+    4. Active ``portal_links`` row → server-derived ``patient_id``.
+
+    Commercial subscription status (past_due / grace / expired / cancelled /
+    commercial suspended) does **not** deny portal access here. Abuse
+    suspension remains effective via ``get_ctx``.
     """
+    from app.modules.subscriptions.commercial_policy import assert_portal_access
+
+    assert_portal_access(db, tenant_id=ctx.tenant_id)
     try:
         link = portal_service.active_link(db, user_id=ctx.user_id, tenant_id=ctx.tenant_id)
         patient = patients_service.get_patient(
@@ -197,6 +207,7 @@ def portal_me(
             id=pc.patient.id,
             display_name=pc.patient.display_name,
             phone=pc.patient.phone,
+            email=pc.patient.email,
             is_active=pc.patient.is_active,
         ),
     )
@@ -208,7 +219,72 @@ def portal_profile(pc: PortalContext = Depends(portal_ctx)) -> S.PortalPatient: 
         id=pc.patient.id,
         display_name=pc.patient.display_name,
         phone=pc.patient.phone,
+        email=pc.patient.email,
         is_active=pc.patient.is_active,
+    )
+
+
+@router.get("/locations", response_model=list[S.PortalBookableLocation])
+def portal_locations(
+    pc: PortalContext = Depends(portal_ctx),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> list[S.PortalBookableLocation]:
+    from app.modules.clinics import service as clinics_service
+
+    locs = clinics_service.list_locations(db, tenant_id=pc.tenant_id)
+    return [
+        S.PortalBookableLocation(id=loc.id, name=loc.name, timezone=loc.timezone)
+        for loc in locs
+        if loc.is_active
+    ]
+
+
+@router.get("/practitioners", response_model=list[S.PortalBookablePractitioner])
+def portal_practitioners(
+    pc: PortalContext = Depends(portal_ctx),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> list[S.PortalBookablePractitioner]:
+    """Verified practitioners only — display name + id. No staff contact/PHI."""
+    from app.modules.identity.models import Practitioner
+    from app.modules.tenancy.models import Verification
+
+    rows = db.execute(
+        select(Practitioner, Verification)
+        .join(
+            Verification,
+            (Verification.practitioner_id == Practitioner.id)
+            & (Verification.tenant_id == pc.tenant_id),
+        )
+        .where(Practitioner.is_active.is_(True), Verification.status == "approved")
+        .order_by(Practitioner.display_name)
+    ).all()
+    return [
+        S.PortalBookablePractitioner(id=p.id, display_name=p.display_name) for p, _v in rows
+    ]
+
+
+@router.get("/availability", response_model=S.PortalAvailability)
+def portal_availability(
+    practitioner_id: uuid.UUID,
+    location_id: uuid.UUID,
+    day: date,
+    pc: PortalContext = Depends(portal_ctx),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.PortalAvailability:
+    tz_name, slot_minutes, slots = scheduling_service.list_free_slots(
+        db,
+        tenant_id=pc.tenant_id,
+        practitioner_id=practitioner_id,
+        location_id=location_id,
+        day=day,
+    )
+    return S.PortalAvailability(
+        practitioner_id=practitioner_id,
+        location_id=location_id,
+        timezone=tz_name,
+        date=day.isoformat(),
+        slot_minutes=slot_minutes,
+        slots=[S.PortalAvailabilitySlot(start_at=s, end_at=e) for s, e in slots],
     )
 
 
@@ -230,6 +306,53 @@ def portal_appointments(
         q = q.where(Appointment.status == status)
     rows = list(db.execute(q.limit(min(max(limit, 1), 200))).scalars().all())
     return [_appt_resp(a) for a in rows]
+
+
+@router.post("/appointments", response_model=S.PortalAppointment)
+def portal_book_appointment(
+    body: S.PortalAppointmentBook,
+    ctx: RequestContext = Depends(require(P.PORTAL_APPOINTMENT_BOOK)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.PortalAppointment:
+    """Patient self-book. Ownership is always the linked patient — never body."""
+    from app.modules.subscriptions.commercial_policy import assert_portal_access
+
+    assert_portal_access(db, tenant_id=ctx.tenant_id)
+    try:
+        link_patient = portal_service.resolve_patient_id(
+            db, user_id=ctx.user_id, tenant_id=ctx.tenant_id
+        )
+        patient = patients_service.get_patient(
+            db, tenant_id=ctx.tenant_id, patient_id=link_patient
+        )
+    except NotFoundError:
+        raise NotFoundError("not found") from None
+    if not patient.is_active:
+        raise NotFoundError("not found")
+    appt = scheduling_service.create_appointment(
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_id=ctx.user_id,
+        patient_id=patient.id,
+        practitioner_id=body.practitioner_id,
+        location_id=body.location_id,
+        start=body.start,
+        duration_minutes=body.duration_minutes,
+        notes=None,
+        idempotency_key=body.idempotency_key,
+        walk_in=False,
+    )
+    audit_service.append(
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_type=PORTAL_ACTOR,
+        actor_id=str(ctx.user_id),
+        action="portal.appointment.book",
+        resource_type="appointment",
+        resource_id=str(appt.id),
+        request_id=request_id_ctx.get(),
+    )
+    return _appt_resp(appt)
 
 
 @router.get("/appointments/{appointment_id}", response_model=S.PortalAppointment)
@@ -258,6 +381,9 @@ def portal_appointment_cancel(
 ) -> S.PortalAppointment:
     # Narrow-perm route: require() yields a RequestContext, so ownership is
     # resolved here through the same link choke point — never from the body.
+    from app.modules.subscriptions.commercial_policy import assert_portal_access
+
+    assert_portal_access(db, tenant_id=ctx.tenant_id)
     try:
         link_patient = portal_service.resolve_patient_id(
             db, user_id=ctx.user_id, tenant_id=ctx.tenant_id
@@ -501,9 +627,11 @@ def portal_plans(
     pc: PortalContext = Depends(portal_ctx),  # noqa: B008
     db: DBSession = Depends(get_db),  # noqa: B008
 ) -> list[S.PortalTreatmentPlan]:
-    return [
-        _plan_resp(db, p) for p in list_plans(db, tenant_id=pc.tenant_id, patient_id=pc.patient_id)
-    ]
+    # Draft plans are clinic-only. Active/completed = published for portal.
+    plans = patient_timeline.filter_portal_plans(
+        list_plans(db, tenant_id=pc.tenant_id, patient_id=pc.patient_id)
+    )
+    return [_plan_resp(db, p) for p in plans]
 
 
 @router.get("/treatment-plans/{plan_id}", response_model=S.PortalTreatmentPlan)
@@ -518,6 +646,7 @@ def portal_plan(
         raise NotFoundError("not found") from None
     if plan.patient_id != pc.patient_id:
         raise NotFoundError("not found")
+    patient_timeline.assert_portal_plan_visible(plan)
     return _plan_resp(db, plan)
 
 
@@ -544,8 +673,14 @@ def portal_consents(
     db: DBSession = Depends(get_db),  # noqa: B008
 ) -> list[S.PortalConsent]:
     # Consents attach to plans or procedure records; both resolve to the
-    # patient through the plan or the record's encounter.
-    plan_ids = {p.id for p in list_plans(db, tenant_id=pc.tenant_id, patient_id=pc.patient_id)}
+    # patient through the plan or the record's encounter. Draft-plan
+    # consents stay clinic-only until the plan is published (active/completed).
+    plan_ids = {
+        p.id
+        for p in patient_timeline.filter_portal_plans(
+            list_plans(db, tenant_id=pc.tenant_id, patient_id=pc.patient_id)
+        )
+    }
     encounters, _ = clinical_service.list_encounters(
         db, tenant_id=pc.tenant_id, patient_id=pc.patient_id, limit=200
     )
@@ -811,6 +946,85 @@ def portal_credit_notes(
                 )
             )
     return out
+
+
+# --- patient 360 (portal audience: released rows only) ---
+
+
+@router.get("/overview", response_model=S.PortalOverview)
+def portal_overview(
+    pc: PortalContext = Depends(portal_ctx),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.PortalOverview:
+    overview = patient_timeline.build_overview(
+        db, tenant_id=pc.tenant_id, patient_id=pc.patient_id
+    )
+    return S.PortalOverview(
+        display_name=overview.display_name,
+        phone=overview.phone,
+        email=overview.email,
+        date_of_birth=(
+            overview.date_of_birth.isoformat() if overview.date_of_birth else None
+        ),
+        is_active=overview.is_active,
+        last_visit_at=overview.last_visit_at,
+        next_appointment_at=overview.next_appointment_at,
+        next_appointment_id=overview.next_appointment_id,
+        outstanding_balance=overview.outstanding_balance,
+        currency=overview.currency,
+        follow_up_due=(
+            overview.follow_up_due.isoformat() if overview.follow_up_due else None
+        ),
+    )
+
+
+@router.get("/timeline", response_model=S.PortalTimelinePage)
+def portal_timeline(
+    pc: PortalContext = Depends(portal_ctx),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+    category: str | None = None,
+    limit: int = 50,
+    cursor: str | None = None,
+) -> S.PortalTimelinePage:
+    cat: patient_timeline.Category | None = None
+    if category is not None:
+        allowed = {"admin", "scheduling", "clinical", "billing", "documents", "care"}
+        if category not in allowed:
+            raise ValidationError("unknown timeline category")
+        cat = category  # type: ignore[assignment]
+    items, next_cursor = patient_timeline.build_timeline(
+        db,
+        tenant_id=pc.tenant_id,
+        patient_id=pc.patient_id,
+        audience="portal",
+        category=cat,
+        limit=limit,
+        cursor=cursor,
+    )
+    _audit(
+        db,
+        pc,
+        action="portal.timeline.read",
+        resource_type="patient",
+        resource_id=str(pc.patient_id),
+    )
+    return S.PortalTimelinePage(
+        items=[
+            S.PortalTimelineItem(
+                event_id=i.event_id,
+                kind=i.kind,
+                category=i.category,
+                occurred_at=i.occurred_at,
+                title=i.title,
+                summary=i.summary,
+                resource_type=i.resource_type,
+                resource_id=i.resource_id,
+                status=i.status,
+            )
+            for i in items
+        ],
+        next_cursor=next_cursor,
+    )
 
 
 # --- access log (own portal events only) ---

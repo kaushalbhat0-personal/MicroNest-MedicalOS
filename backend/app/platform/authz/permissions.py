@@ -22,6 +22,9 @@ class P:
     LOCATIONS_MANAGE = "locations.manage"
     AUDIT_READ = "audit.read"
     SUPPORT_GRANT = "support.grant"  # defined; granting flow is P5+
+    # P2.0 commercial (read for clinic admins; manage is platform-only)
+    SUBSCRIPTION_READ = "subscription.read"
+    SUBSCRIPTION_MANAGE = "subscription.manage"
 
     # Declared for P2+ (no enforcement points yet)
     PATIENT_READ = "patient.read"
@@ -51,13 +54,21 @@ class P:
     BILLING_CONFIG = "billing.config"
     INVENTORY_READ = "inventory.read"
     INVENTORY_ADJUST = "inventory.adjust"
+    INVENTORY_MANAGE = "inventory.manage"
+    INVENTORY_PURCHASE = "inventory.purchase"
     DOCUMENT_READ = "documents.read"
     DOCUMENT_UPLOAD = "documents.upload"
     PORTAL_READ = "portal.read"
     PORTAL_APPOINTMENT_CANCEL = "portal.appointment.cancel"
+    PORTAL_APPOINTMENT_BOOK = "portal.appointment.book"
     BRANDING_MANAGE = "branding.manage"
     REPORTS_VIEW = "reports.view"
     REPORTS_EXPORT = "reports.export"
+    FOLLOWUP_READ = "followup.read"
+    FOLLOWUP_MANAGE = "followup.manage"
+    COMMUNICATION_READ = "communication.read"
+    COMMUNICATION_LOG = "communication.log"
+    COMM_CONSENT_MANAGE = "communication.consent.manage"
 
 
 CLINICAL_ADMIN = frozenset(
@@ -73,6 +84,25 @@ CLINICAL_ADMIN = frozenset(
         P.DENTAL_READ,
         P.DENTAL_RECORD,
         P.PLAN_MANAGE,
+    }
+)
+
+COMMS_FULL = frozenset(
+    {
+        P.FOLLOWUP_READ,
+        P.FOLLOWUP_MANAGE,
+        P.COMMUNICATION_READ,
+        P.COMMUNICATION_LOG,
+        P.COMM_CONSENT_MANAGE,
+    }
+)
+
+INVENTORY_FULL = frozenset(
+    {
+        P.INVENTORY_READ,
+        P.INVENTORY_ADJUST,
+        P.INVENTORY_MANAGE,
+        P.INVENTORY_PURCHASE,
     }
 )
 
@@ -93,12 +123,18 @@ BILLING_FULL = frozenset(
 # custom roles can never include platform.* permissions).
 SEED_ROLES: dict[str, frozenset[str]] = {
     "platform_admin": frozenset(
-        {P.PLATFORM_TENANT_CREATE, P.PLATFORM_TENANT_SUSPEND, P.PLATFORM_HEALTH}
+        {
+            P.PLATFORM_TENANT_CREATE,
+            P.PLATFORM_TENANT_SUSPEND,
+            P.PLATFORM_HEALTH,
+            P.SUBSCRIPTION_MANAGE,
+        }
     ),
     "tenant_admin": frozenset(
         {
             P.TENANT_READ,
             P.TENANT_SETTINGS,
+            P.SUBSCRIPTION_READ,
             P.STAFF_INVITE,
             P.STAFF_MANAGE,
             P.ROLES_MANAGE,
@@ -109,8 +145,11 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.APPOINTMENT_UPDATE,
             P.PATIENT_READ,
             P.PATIENT_CREATE,
+            P.PATIENT_UPDATE,
             *CLINICAL_ADMIN,
             *BILLING_FULL,
+            *COMMS_FULL,
+            *INVENTORY_FULL,
         }
     ),
     "doctor": frozenset(
@@ -122,6 +161,9 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             *CLINICAL_ADMIN,
             P.BILLING_READ,
             P.BILLING_CREATE,
+            *COMMS_FULL,
+            P.INVENTORY_READ,
+            P.INVENTORY_ADJUST,
         }
     ),
     "receptionist": frozenset(
@@ -132,10 +174,14 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.APPOINTMENT_UPDATE,
             P.PATIENT_READ,
             P.PATIENT_CREATE,
+            P.PATIENT_UPDATE,
             P.ENCOUNTER_OPEN,
             P.ENCOUNTER_READ,
             P.BILLING_READ,
             P.PAYMENT_RECORD,
+            *COMMS_FULL,
+            P.INVENTORY_READ,
+            P.INVENTORY_ADJUST,
         }
     ),
     "nurse": frozenset(
@@ -146,16 +192,30 @@ SEED_ROLES: dict[str, frozenset[str]] = {
             P.ENCOUNTER_READ,
             P.CLINICAL_READ,
             P.CLINICAL_CREATE,
+            P.FOLLOWUP_READ,
+            P.FOLLOWUP_MANAGE,
+            P.COMMUNICATION_READ,
+            P.COMMUNICATION_LOG,
+            P.INVENTORY_READ,
+            P.INVENTORY_ADJUST,
         }
     ),
-    "accountant": frozenset({P.TENANT_READ, *BILLING_FULL}),
+    "accountant": frozenset({P.TENANT_READ, *BILLING_FULL, *INVENTORY_FULL}),
     "staff": frozenset({P.TENANT_READ}),
-    "patient": frozenset({P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL}),
+    "patient": frozenset(
+        {P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL, P.PORTAL_APPOINTMENT_BOOK}
+    ),
 }
 
 # Permissions a tenant custom role may never contain.
 PLATFORM_ONLY = frozenset(
-    {P.PLATFORM_TENANT_CREATE, P.PLATFORM_TENANT_SUSPEND, P.PLATFORM_HEALTH, P.SUPPORT_GRANT}
+    {
+        P.PLATFORM_TENANT_CREATE,
+        P.PLATFORM_TENANT_SUSPEND,
+        P.PLATFORM_HEALTH,
+        P.SUPPORT_GRANT,
+        P.SUBSCRIPTION_MANAGE,
+    }
 )
 
 

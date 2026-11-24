@@ -52,6 +52,7 @@ def test_full_p1_demo_flow(client, owner_db, make_owner_user, make_tenant) -> No
 
     from app.modules.clinics import service as clinics_service
     from app.modules.identity import service as identity_service
+    from app.modules.subscriptions import service as subscriptions_service
     from app.modules.tenancy import service as tenancy_service
     from app.modules.tenancy.models import Tenant
 
@@ -63,6 +64,8 @@ def test_full_p1_demo_flow(client, owner_db, make_owner_user, make_tenant) -> No
         password="password-12345-abc",
     )
     admin_user.is_platform_admin = False
+    if subscriptions_service.get_subscription(owner_db, tenant_id=tenant.id) is None:
+        subscriptions_service.create_trial_subscription(owner_db, tenant=tenant)
     clinics_service.create_location(owner_db, tenant=tenant, name="HQ")
     tenancy_service.create_membership(
         owner_db,

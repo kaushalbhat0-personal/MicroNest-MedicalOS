@@ -176,6 +176,16 @@ def test_portal_dental_consents_recalls_and_access_log(
         patient_id=pid,
         practitioner_id=b["practitioner"].id,
     )
+    dental_plans.add_plan_item(
+        owner_db,
+        tenant_id=tid,
+        plan_id=plan.id,
+        procedure_code="filling",
+        tooth=16,
+        sequence=1,
+    )
+    # Draft stays clinic-only; activate publishes for portal visibility.
+    dental_plans.activate_plan(owner_db, tenant_id=tid, plan_id=plan.id)
     dental_plans.create_consent(
         owner_db,
         tenant_id=tid,
@@ -218,7 +228,23 @@ def test_portal_dental_consents_recalls_and_access_log(
     assert {x["id"] for x in plans} == {str(plan.id)}
     assert "created_by" not in plans[0]
     one = ca.get(f"/api/v1/portal/treatment-plans/{plan.id}", headers=ha).json()
-    assert one["status"] == "draft"
+    assert one["status"] == "active"
+
+    draft = dental_plans.create_plan(
+        owner_db,
+        tenant_id=tid,
+        actor_id=act,
+        patient_id=pid,
+        practitioner_id=b["practitioner"].id,
+        notes="clinic-only draft",
+    )
+    owner_db.commit()
+    hidden = ca.get("/api/v1/portal/treatment-plans", headers=ha).json()
+    assert str(draft.id) not in {x["id"] for x in hidden}
+    assert (
+        ca.get(f"/api/v1/portal/treatment-plans/{draft.id}", headers=ha).status_code
+        == 404
+    )
 
     consents = ca.get("/api/v1/portal/consents", headers=ha).json()
     assert len(consents) == 1 and consents[0]["consenter_name"] == "Maya Rao"

@@ -49,10 +49,27 @@ ALL_TABLES = [
     "email_verifications",
     "estimate_lines",
     "estimates",
+    "follow_ups",
+    "communication_logs",
+    "communication_consents",
+    "goods_receipt_lines",
+    "goods_receipts",
+    "purchase_order_lines",
+    "purchase_orders",
+    "inventory_movements",
+    "inventory_balances",
+    "inventory_suppliers",
+    "inventory_items",
     "invitations",
     "invoice_lines",
     "invoices",
+    "leave_requests",
+    "leave_types",
+    "attendance_records",
+    "staff_schedules",
+    "staff_profiles",
     "locations",
+    "location_working_hours",
     "membership_locations",
     "memberships",
     "observations",
@@ -73,8 +90,12 @@ ALL_TABLES = [
     "tenants",
     "tenant_owners",
     "tenant_specialties",
+    "subscription_events",
     "subscription_plans",
     "subscriptions",
+    "saas_customers",
+    "saas_payment_transactions",
+    "saas_webhook_inbox",
     "workspace_provisions",
     "tooth_finding_surfaces",
     "tooth_findings",
@@ -142,9 +163,15 @@ def owner_db(migrated_db: None):  # type: ignore[no-untyped-def]
         from app.platform.authz.permissions import SEED_ROLES
 
         now = datetime.now(timezone.utc)
-        for name, perms in SEED_ROLES.items():
-            import json
+        import json
 
+        # Seed roles use tenant_id NULL; Postgres UNIQUE (tenant_id, name) does
+        # not collapse NULLs, so wipe before re-insert to avoid duplicates across
+        # tests (and across interrupted parallel runs).
+        session.execute(
+            text("DELETE FROM roles WHERE tenant_id IS NULL AND is_seed IS TRUE")
+        )
+        for name, perms in SEED_ROLES.items():
             session.execute(
                 text(
                     "INSERT INTO roles (id, tenant_id, name, permissions, is_seed, created_at) "
@@ -157,12 +184,58 @@ def owner_db(migrated_db: None):  # type: ignore[no-untyped-def]
         session.execute(
             text(
                 "INSERT INTO subscription_plans "
-                "(id, code, name, max_locations, max_practitioners, max_staff_seats, "
+                "(id, code, name, family_code, version, description, currency, "
+                " billing_interval, price_minor, features, "
+                " max_locations, max_practitioners, max_staff_seats, "
                 " trial_days, is_active, created_at, updated_at) "
-                "VALUES (gen_random_uuid(), 'trial-14d', 'Trial (14-day)', "
-                " 3, 10, 25, 14, true, :now, :now)"
+                "VALUES "
+                "(gen_random_uuid(), 'trial-14d', 'Trial (14-day)', 'trial-14d', 1, "
+                " '14-day trial', 'INR', NULL, 0, CAST(:feat AS JSONB), "
+                " 3, 10, 25, 14, true, :now, :now), "
+                "(gen_random_uuid(), 'starter-v1', 'Starter', 'starter', 1, "
+                " 'Starter catalog', 'INR', 'month', 499900, CAST(:feat AS JSONB), "
+                " 1, 5, 15, 0, true, :now, :now), "
+                "(gen_random_uuid(), 'growth-v1', 'Growth', 'growth', 1, "
+                " 'Growth catalog', 'INR', 'month', 999900, CAST(:feat AS JSONB), "
+                " 5, 25, 50, 0, true, :now, :now) "
+                "ON CONFLICT (code) DO NOTHING"
             ),
-            {"now": now},
+            {
+                "now": now,
+                "feat": (
+                    '{"patient_portal": true, "inventory": false, '
+                    '"operations_dashboard": true, "clinic_billing": true, '
+                    '"staff_workforce": false, "informational_limits": true}'
+                ),
+            },
+        )
+        # Trial: all enforced features on for evaluation (P2.3).
+        session.execute(
+            text(
+                "UPDATE subscription_plans SET features = CAST(:feat AS JSONB) "
+                "WHERE code = 'trial-14d'"
+            ),
+            {
+                "feat": (
+                    '{"patient_portal": true, "inventory": true, '
+                    '"operations_dashboard": true, "clinic_billing": true, '
+                    '"staff_workforce": true, "informational_limits": true}'
+                ),
+            },
+        )
+        # Growth catalog features (inventory + staff_workforce).
+        session.execute(
+            text(
+                "UPDATE subscription_plans SET features = CAST(:feat AS JSONB) "
+                "WHERE code = 'growth-v1'"
+            ),
+            {
+                "feat": (
+                    '{"patient_portal": true, "inventory": true, '
+                    '"operations_dashboard": true, "clinic_billing": true, '
+                    '"staff_workforce": true, "informational_limits": true}'
+                ),
+            },
         )
         session.commit()
         yield session
@@ -214,9 +287,22 @@ def make_owner_user(owner_db):  # type: ignore[no-untyped-def]
 
 @pytest.fixture()
 def make_tenant(owner_db):  # type: ignore[no-untyped-def]
-    def _make(*, slug: str | None = None, name: str = "Acme Clinic") -> object:
+    def _make(
+        *,
+        slug: str | None = None,
+        name: str = "Acme Clinic",
+        with_trial: bool = True,
+    ) -> object:
+        from app.modules.subscriptions import service as subscriptions_service
+
         slug = slug or f"t-{uuid.uuid4().hex[:8]}"
         tenant = tenancy_service.create_tenant(owner_db, name=name, slug=slug)
+        # P2.2: capacity-consuming writes require a commercially usable
+        # subscription. Opt out with with_trial=False for legacy fixtures.
+        if with_trial and subscriptions_service.get_subscription(
+            owner_db, tenant_id=tenant.id
+        ) is None:
+            subscriptions_service.create_trial_subscription(owner_db, tenant=tenant)
         owner_db.commit()
         return tenant
 

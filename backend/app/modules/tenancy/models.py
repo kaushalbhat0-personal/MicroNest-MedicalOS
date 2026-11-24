@@ -164,3 +164,5 @@ class Invitation(Base):
     expires_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     accepted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    # JSON array of location UUID strings; empty/null = all locations on accept.
+    location_ids_json: Mapped[str | None] = mapped_column(Text, nullable=True)

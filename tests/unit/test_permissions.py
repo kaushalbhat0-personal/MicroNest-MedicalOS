@@ -32,7 +32,7 @@ def test_seed_roles_reference_known_permissions() -> None:
     # P6 portal: the patient seed role carries exactly the portal allow-list
     # (portal-scoped reads + own-appointment cancel) and nothing staff-side.
     assert SEED_ROLES["patient"] == frozenset(
-        {P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL}
+        {P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL, P.PORTAL_APPOINTMENT_BOOK}
     )
 
 

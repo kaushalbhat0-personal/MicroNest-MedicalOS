@@ -24,14 +24,18 @@ def provision_tenant(
     slug: str | None = None,
     admin_email: str | None = None,
 ):  # type: ignore[no-untyped-def]
-    """Create tenant + location + tenant_admin membership. Returns dict."""
+    """Create tenant + trial subscription + location + tenant_admin membership."""
     from app.modules.clinics import service as clinics_service
+    from app.modules.subscriptions import service as subscriptions_service
     from app.modules.tenancy import service as tenancy_service
 
     admin = make_owner_user(
         email=admin_email or f"admin-{uuid.uuid4().hex[:6]}@example.com"
     )
     tenant = make_tenant(slug=slug)
+    # Trial first so P2.2 capacity checks see a commercially usable plan.
+    if subscriptions_service.get_subscription(owner_db, tenant_id=tenant.id) is None:
+        subscriptions_service.create_trial_subscription(owner_db, tenant=tenant)
     location = clinics_service.create_location(
         owner_db, tenant=tenant, name="Main Clinic"
     )

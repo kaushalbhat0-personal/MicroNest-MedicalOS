@@ -105,6 +105,9 @@ def create_prescription(
     items: list[dict[str, object]],
     location_ids: frozenset[uuid.UUID] | None = None,
 ) -> Prescription:
+    from app.modules.subscriptions.commercial_policy import assert_business_create
+
+    assert_business_create(db, tenant_id=tenant_id, operation="prescription.create")
     _encounter_in_scope(
         db, tenant_id=tenant_id, encounter_id=encounter_id, location_ids=location_ids
     )

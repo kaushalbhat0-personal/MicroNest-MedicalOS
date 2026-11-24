@@ -156,6 +156,11 @@ def _provision_rows(
     # as invite acceptance: the tenant id comes from the insert, never the client).
     db.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant.id)})
 
+    # Trial subscription first so capacity checks during location/membership
+    # see a commercially usable plan (P2.2).
+    subscription = subscriptions_service.create_trial_subscription(db, tenant=tenant)
+    plan = db.get(SubscriptionPlan, subscription.plan_id)
+
     location = clinics_service.create_location(
         db,
         tenant=tenant,
@@ -196,9 +201,6 @@ def _provision_rows(
                 enabled_at=now,
             )
         )
-
-    subscription = subscriptions_service.create_trial_subscription(db, tenant=tenant)
-    plan = db.get(SubscriptionPlan, subscription.plan_id)
 
     request_id = request_id_ctx.get()
     audit_service.append(

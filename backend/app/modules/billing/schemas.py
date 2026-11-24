@@ -8,7 +8,9 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+from app.platform.time import to_api_utc
 
 
 class ServiceCatalogCreateRequest(BaseModel):
@@ -378,3 +380,8 @@ class ReceiptResponse(BaseModel):
     financial_year: str | None
     doc_number: int | None
     created_at: datetime
+
+    @field_serializer("created_at")
+    def _serialize_created_at(self, value: datetime) -> str:
+        # Stable UTC ``Z`` regardless of driver/session offset presentation.
+        return to_api_utc(value)

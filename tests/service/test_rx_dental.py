@@ -264,6 +264,24 @@ def test_procedure_record_lifecycle(owner_db, make_owner_user, make_tenant) -> N
         surface="occlusal",
     )
     assert r.status == DM.RECORD_PLANNED
+    with pytest.raises(ForbiddenError):
+        dplans.transition_procedure_record(
+            owner_db, tenant_id=tid, record_id=r.id, to_status="in_progress"
+        )
+    consent = dplans.create_consent(
+        owner_db,
+        tenant_id=tid,
+        procedure_record_id=r.id,
+        consenter_name="Pat Synthetic",
+        consenter_relation="self",
+    )
+    dplans.decide_consent(
+        owner_db,
+        tenant_id=tid,
+        consent_id=consent.id,
+        decision=DM.CONSENT_GRANTED,
+        actor_id=b["admin"].id,
+    )
     started = dplans.transition_procedure_record(
         owner_db, tenant_id=tid, record_id=r.id, to_status="in_progress"
     )
@@ -368,6 +386,9 @@ def test_document_ref_validation(owner_db, make_owner_user, make_tenant) -> None
         sha256="abc",
     )
     assert ref.doc_type == "xray"
+    # Client hint is ignored; key is always server-allocated and tenant-bound.
+    assert ref.storage_key.startswith(f"tenants/{tid}/encounters/{e.id}/documents/")
+    assert ref.storage_key != "tenant/x/16-periapical.png"
     with pytest.raises(ValidationError):
         dplans.create_document_ref(
             owner_db,
@@ -384,8 +405,18 @@ def test_document_ref_validation(owner_db, make_owner_user, make_tenant) -> None
             encounter_id=e.id,
             actor_id=b["admin"].id,
             doc_type="xray",
-            storage_key="  ",
+            storage_key="../etc/passwd",
         )
+    # Empty/omitted hint is allowed; server still allocates.
+    ok = dplans.create_document_ref(
+        owner_db,
+        tenant_id=tid,
+        encounter_id=e.id,
+        actor_id=b["admin"].id,
+        doc_type="xray",
+        storage_key=None,
+    )
+    assert ok.storage_key.startswith(f"tenants/{tid}/")
 
 
 def test_location_scope_denied_for_clinical(

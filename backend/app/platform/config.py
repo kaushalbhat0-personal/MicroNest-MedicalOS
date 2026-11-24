@@ -92,6 +92,20 @@ class Settings(BaseSettings):
     API_HOST: str = Field(default="127.0.0.1")
     API_PORT: int = Field(default=8000)
 
+    # P2.4/P2.5 SaaS payments (clinic subscription). Never put live keys in tests.
+    SAAS_PAYMENT_PROVIDER: str = Field(
+        default="mock", description="mock | razorpay (sandbox keys only in non-prod)"
+    )
+    SAAS_PAYMENT_WEBHOOK_SECRET: str = Field(default="mock-webhook-secret")
+    # Previous webhook secret accepted during rotation (delayed deliveries).
+    SAAS_PAYMENT_WEBHOOK_SECRET_PREVIOUS: str = Field(default="")
+    SAAS_GRACE_DAYS: int = Field(default=7)
+    SAAS_WEBHOOK_MAX_ATTEMPTS: int = Field(default=8)
+    RAZORPAY_KEY_ID: str = Field(default="")
+    RAZORPAY_KEY_SECRET: str = Field(default="")
+    RAZORPAY_WEBHOOK_SECRET: str = Field(default="")
+    RAZORPAY_WEBHOOK_SECRET_PREVIOUS: str = Field(default="")
+
     @field_validator("JWT_SECRET")
     @classmethod
     def _secret_length(cls, v: str) -> str:
@@ -215,6 +229,29 @@ def validate_for_boot(settings: Settings) -> list[str]:
             "NOTIFY_PROVIDER=dev-console is development-only; "
             "use none (explicitly unavailable) in preview/production"
         )
+    # SaaS payments — never fall back to mock in production.
+    provider = (settings.SAAS_PAYMENT_PROVIDER or "").strip().lower()
+    if _is_prod(env):
+        if provider != "razorpay":
+            problems.append(
+                "SAAS_PAYMENT_PROVIDER must be razorpay in production "
+                "(mock fallback is forbidden)"
+            )
+        for var in ("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"):
+            if not getattr(settings, var, ""):
+                problems.append(f"{var} is required when SAAS_PAYMENT_PROVIDER=razorpay")
+        key_id = settings.RAZORPAY_KEY_ID or ""
+        if key_id.startswith("rzp_test_"):
+            problems.append("production must not use Razorpay test keys (RAZORPAY_KEY_ID)")
+    elif provider == "razorpay":
+        for var in ("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"):
+            if not getattr(settings, var, ""):
+                problems.append(f"{var} is required when SAAS_PAYMENT_PROVIDER=razorpay")
+        key_id = settings.RAZORPAY_KEY_ID or ""
+        if key_id and not key_id.startswith("rzp_test_"):
+            problems.append(
+                "non-production Razorpay must use test keys (RAZORPAY_KEY_ID starts with rzp_test_)"
+            )
     return problems
 
 

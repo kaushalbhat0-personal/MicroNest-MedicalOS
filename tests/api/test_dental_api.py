@@ -175,6 +175,29 @@ def test_procedure_record_lifecycle(
     )
     assert r.status_code == 200, r.text
     rid = r.json()["id"]
+    # Hard-gate: in_progress/completed require granted consent on this record.
+    blocked = doc.post(
+        f"/api/v1/tenants/{tid}/procedure-records/{rid}/status",
+        json={"status": "in_progress"},
+        headers=h,
+    )
+    assert blocked.status_code == 403, blocked.text
+    consent = doc.post(
+        f"/api/v1/tenants/{tid}/consents",
+        json={
+            "procedure_record_id": rid,
+            "consenter_name": "Pat Synthetic",
+            "consenter_relation": "self",
+        },
+        headers=h,
+    )
+    assert consent.status_code == 200, consent.text
+    decide = doc.post(
+        f"/api/v1/tenants/{tid}/consents/{consent.json()['id']}/decide",
+        json={"decision": "granted"},
+        headers=h,
+    )
+    assert decide.status_code == 200, decide.text
     for nxt in ("in_progress", "completed"):
         s = doc.post(
             f"/api/v1/tenants/{tid}/procedure-records/{rid}/status",
@@ -226,7 +249,11 @@ def test_recall_and_document_flow(
     docs = doc.get(
         f"/api/v1/tenants/{tid}/encounters/{e['id']}/documents", headers=h
     ).json()
-    assert len(docs) == 1 and docs[0]["storage_key"] == "t/x/16.png"
+    assert len(docs) == 1
+    # Client-supplied key is ignored; server allocates a tenant-bound path.
+    key = docs[0]["storage_key"]
+    assert key.startswith(f"tenants/{tid}/encounters/{e['id']}/documents/")
+    assert key != "t/x/16.png"
 
 
 def test_cancel_plan_cascades_items(

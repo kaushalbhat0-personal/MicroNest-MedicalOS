@@ -11,7 +11,7 @@ import contextvars
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 # Server-side request scope. Set per request inside a transaction; consumed by
@@ -27,6 +27,18 @@ class Base(DeclarativeBase):
 
 def make_session_factory(db_url: str) -> sessionmaker[Session]:
     engine = create_engine(db_url, pool_pre_ping=True, future=True)
+
+    # Timestamptz values are UTC instants. Pin the session TimeZone so
+    # drivers do not re-express them in the host's local offset (e.g. IST
+    # on Windows), which would change API JSON from ``Z`` to ``+05:30``.
+    @event.listens_for(engine, "connect")
+    def _set_utc(dbapi_conn: object, _connection_record: object) -> None:
+        cursor = dbapi_conn.cursor()  # type: ignore[attr-defined]
+        try:
+            cursor.execute("SET TIME ZONE 'UTC'")
+        finally:
+            cursor.close()
+
     # autoflush ON (standard): reads in a transaction must see the
     # transaction's own writes (services rely on this).
     return sessionmaker(bind=engine, autoflush=True, expire_on_commit=False, class_=Session)

@@ -78,6 +78,9 @@ def open_encounter(
     chief_complaint: str | None = None,
     location_ids: frozenset[uuid.UUID] | None = None,
 ) -> Encounter:
+    from app.modules.subscriptions.commercial_policy import assert_business_create
+
+    assert_business_create(db, tenant_id=tenant_id, operation="encounter.open")
     _encounter_scope(
         db,
         tenant_id=tenant_id,

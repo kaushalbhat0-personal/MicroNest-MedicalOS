@@ -155,7 +155,7 @@ export default function PlatformTenantDetailPage() {
                       {detail.data.subscription.limits
                         ? `${detail.data.subscription.limits.max_locations} locations · ${detail.data.subscription.limits.max_practitioners} practitioners · ${detail.data.subscription.limits.max_staff_seats} seats`
                         : "—"}{" "}
-                      <span className="hos-helper">(informational only, not enforced)</span>
+                      <span className="hos-helper">(capacity enforced for seats/locations/practitioners)</span>
                     </Td>
                   </tr>
               </Table>

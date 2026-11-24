@@ -110,47 +110,60 @@ validate on submit + touched; server errors in summary; never
 placeholder-only labels; pending + unsaved indicators; read-only vs
 disabled distinguished.
 
-## 13. Clinical workspace
+## 13. Application shells
+
+Clinic workspace (`AppShell` `variant="clinic"`): compact density, grouped
+sidebar navigation (Overview / Patient Care / Clinical / Clinic Operations /
+Workspace), sticky header with workspace + signed-in identity, mobile drawer
+with Escape/backdrop dismiss. Permission-aware nav remains server-gated.
+
+Patient portal (`variant="portal"`): brand “My Care”, comfortable density,
+top nav on tablet+, drawer on small screens. Must not look like clinic admin.
+
+`PageHeader` uses `.hos-page-header` token classes. Active routes use
+prefix-aware matching (`isNavActive`) with exact match for `/` and `/portal`.
+
+## 14. Clinical workspace
 
 Persistent patient banner → encounter context bar → tabs
 (SOAP/vitals/dx/Rx/dental/docs) → sticky sign/close actions. Close =
 explicit checklist, waivers never pre-checked. Finalized = read-only +
 amend affordance with visible supersede chain.
 
-## 14. Dental
+## 15. Dental
 
 Odontogram = SVG projection of finding rows (FDI 11–48 permanent;
 primary dentition deferred). States via fill + label + icon
 (existing/planned/completed/selected); keyboard roving grid; surface
 select on tooth focus. Projection only — never stored pixels.
 
-## 15. Billing
+## 16. Billing
 
 Display server values only. Money: right-aligned tabular + currency.
 Draft watermark vs issued lock. Balance widget (grand/allocated/
 outstanding), credit badge, lineage (source estimate, FY/doc-number).
 Void/refund/reversal require explicit reason + confirmation.
 
-## 16. Sensitive data
+## 17. Sensitive data
 
 Mask phones/identifiers with reveal; no PHI in URLs, titles, toasts,
 or logs; truncated document names; breadcrumbs use "Patient chart +
 ID"; search shows minimal fields. Frontend masking is convenience,
 never security (backend enforces).
 
-## 17. White-label
+## 18. White-label
 
 Customizable: brand primary/hover/active, accent, logo, favicon,
 approved font choice, portal theme, email/PDF skin. Immutable: contrast
 floor, focus, status semantics, authz, destructive protections,
 interaction semantics. Overrides apply to `--hos-brand-*` only.
 
-## 18. Dark mode
+## 19. Dark mode
 
 Deferred: needs clinical-readability validation; white-label matrix
 explosion; zero current demand. Semantic tokens keep it a future theme.
 
-## 19. Penpot handoff
+## 20. Penpot handoff
 
 Pages: 00-Foundation, 10-Primitives, 20-Patterns, 30-Doctor,
 31-Reception, 32-Accountant, 33-Admin, 40-Tablet, 41-Mobile,
@@ -161,7 +174,7 @@ state, density, icon. Tokens map 1:1 to CSS names. Workflow: connect →
 read-only audit → tokens → primitives → patterns → screens → MCP audit
 → iterate. No writes without human approval.
 
-## 20. Do / Don't
+## 21. Do / Don't
 
 DO: semantic tokens; explicit patient identity; tabular money; obvious
 primary actions; whitespace around clinical content; keyboard flows;
@@ -170,14 +183,14 @@ critical info; animation; arbitrary colors; tiny clinical text;
 decorative dashboards; white-label contrast violations; client-side
 financial math.
 
-## 21. QA gate
+## 22. QA gate
 
 Penpot-approved · tokens/components only · obvious primary action ·
 protected destructive/finalizing actions · WCAG AA + keyboard + focus +
 semantics · responsive trio · all nine states · no PHI leaks ·
 tenant/location correct · type-safe · tested.
 
-## 22. Open decisions
+## 23. Open decisions
 
 Webfont offline policy detail; recall-board/consent-list/receipt-list/
 audit-facet APIs; notification channels/templates; branding asset

@@ -665,14 +665,17 @@ def test_legacy_tenant_detail_has_no_subscription(
     from app.modules.tenancy import service as tenancy_service
 
     admin = make_owner_user(email="legacy-admin@example.com")
-    tenant = make_tenant(slug="legacy-tenant")
-    clinics_service.create_location(owner_db, tenant=tenant, name="HQ")
+    tenant = make_tenant(slug="legacy-tenant", with_trial=False)
+    clinics_service.create_location(
+        owner_db, tenant=tenant, name="HQ", enforce_capacity=False
+    )
     tenancy_service.create_membership(
         owner_db,
         user=admin,
         tenant=tenant,
         role=tenancy_service.get_seed_role(owner_db, "tenant_admin"),
         is_primary=True,
+        enforce_capacity=False,
     )
     owner_db.commit()
     c = login_client(client, email="legacy-admin@example.com")

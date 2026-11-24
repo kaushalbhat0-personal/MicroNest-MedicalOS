@@ -154,6 +154,8 @@ def create_membership(
     role: Role,
     location_ids: list[uuid.UUID] | None = None,
     is_primary: bool = False,
+    enforce_capacity: bool = True,
+    converting_invitation_id: uuid.UUID | None = None,
 ) -> Membership:
     if role.tenant_id is not None and role.tenant_id != tenant.id:
         raise ForbiddenError("role belongs to another tenant")
@@ -162,6 +164,19 @@ def create_membership(
     ).scalar_one_or_none()
     if existing is not None:
         raise ConflictError("membership already exists")
+    if enforce_capacity and role.name != "patient":
+        from app.modules.subscriptions import enforcement as enf
+
+        # Accepting a reserved invite: delta=0 (reservation → membership).
+        # Direct create: delta=1.
+        delta = 0 if converting_invitation_id is not None else 1
+        enf.assert_capacity(
+            db,
+            tenant_id=tenant.id,
+            entitlement_key="max_staff_seats",
+            delta=delta,
+            exclude_invitation_id=converting_invitation_id,
+        )
     now = _now()
     m = Membership(
         id=ids.uuid7(),
@@ -211,11 +226,31 @@ def create_invitation(
     role: Role,
     invited_by: User | None,
     ttl_days: int = 7,
+    location_ids: list[uuid.UUID] | None = None,
+    enforce_capacity: bool = True,
 ) -> tuple[Invitation, str]:
     if role.tenant_id is not None and role.tenant_id != tenant.id:
         raise ForbiddenError("role belongs to another tenant")
+    if location_ids:
+        from app.modules.clinics.models import Location
+
+        for loc_id in location_ids:
+            loc = db.get(Location, loc_id)
+            if loc is None or loc.tenant_id != tenant.id:
+                raise ForbiddenError("location is outside this tenant")
+    if enforce_capacity and role.name != "patient":
+        from app.modules.subscriptions import enforcement as enf
+
+        enf.assert_capacity(
+            db,
+            tenant_id=tenant.id,
+            entitlement_key="max_staff_seats",
+            delta=1,
+        )
     raw = secrets.token_urlsafe(48)
     now = _now()
+    import json
+
     inv = Invitation(
         id=ids.uuid7(),
         tenant_id=tenant.id,
@@ -227,6 +262,9 @@ def create_invitation(
         expires_at=now + timedelta(days=ttl_days),
         accepted_at=None,
         created_at=now,
+        location_ids_json=(
+            json.dumps([str(x) for x in location_ids]) if location_ids else None
+        ),
     )
     db.add(inv)
     return inv, raw
@@ -257,7 +295,11 @@ def accept_invitation(
     db: DBSession, *, token: str, display_name: str, password: str
 ) -> tuple[User, Membership]:
     digest = hashlib.sha256(token.encode()).hexdigest()
-    inv = db.execute(select(Invitation).where(Invitation.token_hash == digest)).scalar_one_or_none()
+    inv = db.execute(
+        select(Invitation)
+        .where(Invitation.token_hash == digest)
+        .with_for_update()
+    ).scalar_one_or_none()
     if inv is None or inv.status != "pending" or inv.expires_at <= _now():
         raise GoneError("invitation invalid or expired")
     tenant = get_tenant(db, inv.tenant_id)
@@ -275,7 +317,22 @@ def accept_invitation(
         raise ForbiddenError("user is deactivated")
     else:
         identity_service.set_password(db, user, password)
-    membership = create_membership(db, user=user, tenant=tenant, role=role)
+    import json
+
+    loc_ids: list[uuid.UUID] | None = None
+    if inv.location_ids_json:
+        try:
+            loc_ids = [uuid.UUID(str(x)) for x in json.loads(inv.location_ids_json)]
+        except (TypeError, ValueError, json.JSONDecodeError):
+            loc_ids = None
+    membership = create_membership(
+        db,
+        user=user,
+        tenant=tenant,
+        role=role,
+        location_ids=loc_ids,
+        converting_invitation_id=inv.id,
+    )
     inv.status = "accepted"
     inv.accepted_at = _now()
     identity_service.record_auth_event(
@@ -312,15 +369,35 @@ def set_verification(
     status: str,
     reviewer: User | None = None,
     reason: str | None = None,
+    enforce_capacity: bool = True,
 ) -> Verification:
     if status not in ("pending", "approved", "rejected"):
         raise ValueError("invalid verification status")
     v = db.execute(
-        select(Verification).where(
+        select(Verification)
+        .where(
             Verification.tenant_id == tenant.id,
             Verification.practitioner_id == practitioner.id,
         )
+        .with_for_update()
     ).scalar_one_or_none()
+    previously_approved = (
+        v is not None and v.status == "approved" and practitioner.is_active
+    )
+    will_count = status == "approved" and practitioner.is_active
+    if (
+        enforce_capacity
+        and will_count
+        and not previously_approved
+    ):
+        from app.modules.subscriptions import enforcement as enf
+
+        enf.assert_capacity(
+            db,
+            tenant_id=tenant.id,
+            entitlement_key="max_practitioners",
+            delta=1,
+        )
     now = _now()
     if v is None:
         v = Verification(
@@ -375,6 +452,25 @@ def update_membership(
         raise GoneError("role no longer exists")
     if target_role.tenant_id is not None and target_role.tenant_id != membership.tenant_id:
         raise ForbiddenError("role belongs to another tenant")
+
+    # Seat reactivation / role change from patient → staff consumes capacity.
+    current_role = db.get(Role, membership.role_id)
+    was_consuming = (
+        membership.is_active
+        and current_role is not None
+        and current_role.name != "patient"
+    )
+    will_consume = target_active and target_role.name != "patient"
+    if will_consume and not was_consuming:
+        from app.modules.subscriptions import enforcement as enf
+
+        enf.assert_capacity(
+            db,
+            tenant_id=membership.tenant_id,
+            entitlement_key="max_staff_seats",
+            delta=1,
+        )
+
     if not target_active or not _role_has_staff_manage(target_role):
         current_role = db.get(Role, membership.role_id)
         if current_role is not None and _role_has_staff_manage(current_role):

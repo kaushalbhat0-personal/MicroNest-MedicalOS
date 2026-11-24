@@ -25,7 +25,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
@@ -300,6 +300,11 @@ def create_invoice(
 ) -> Invoice:
     """Direct invoice creation (OTC / standalone per P4-01 §18). Draft only;
     numbering is allocated at issue, never here."""
+    from app.modules.subscriptions.commercial_policy import assert_feature
+
+    assert_feature(
+        db, tenant_id=tenant_id, feature_key="clinic_billing", operation="invoice.create"
+    )
     moneylib.validate_currency(currency)
     _validate_refs(
         db,
@@ -739,6 +744,99 @@ def outstanding_for_invoice(db: DBSession, *, invoice: Invoice) -> Decimal:
     if outstanding < 0:
         raise ValidationError("allocated and credited amounts exceed invoice total")
     return outstanding
+
+
+def location_outstanding_summary(
+    db: DBSession,
+    *,
+    tenant_id: uuid.UUID,
+    location_id: uuid.UUID,
+) -> tuple[int, Decimal]:
+    """Complete outstanding AR for a location (no row cap).
+
+    Mirrors ``outstanding_for_invoice`` in aggregate:
+    SUM(grand_total) − SUM(effective forward allocations) − SUM(issued credits)
+    over invoices in issued|partially_paid. Draft, paid, and voided excluded.
+    """
+    open_statuses = (M.INVOICE_ISSUED, M.INVOICE_PARTIALLY_PAID)
+    invoice_filter = (
+        M.Invoice.tenant_id == tenant_id,
+        M.Invoice.location_id == location_id,
+        M.Invoice.status.in_(open_statuses),
+    )
+
+    count = int(
+        db.execute(
+            select(func.count()).select_from(M.Invoice).where(*invoice_filter)
+        ).scalar_one()
+    )
+    totals = db.execute(
+        select(func.coalesce(func.sum(M.Invoice.grand_total), 0)).where(*invoice_filter)
+    ).scalar_one()
+    grand = moneylib.ensure_decimal(totals, field="grand_total")
+
+    # Effective allocations: forward rows not cancelled by a reversal.
+    reversed_ids = select(M.PaymentAllocation.reversal_of_id).where(
+        M.PaymentAllocation.reversal_of_id.is_not(None)
+    )
+    allocated = db.execute(
+        select(func.coalesce(func.sum(M.PaymentAllocation.amount), 0))
+        .select_from(M.PaymentAllocation)
+        .join(M.Invoice, M.Invoice.id == M.PaymentAllocation.invoice_id)
+        .where(
+            *invoice_filter,
+            M.PaymentAllocation.reversal_of_id.is_(None),
+            M.PaymentAllocation.id.notin_(reversed_ids),
+        )
+    ).scalar_one()
+    allocated_d = moneylib.ensure_decimal(allocated, field="amount")
+
+    credited = db.execute(
+        select(func.coalesce(func.sum(M.CreditNote.amount), 0))
+        .select_from(M.CreditNote)
+        .join(M.Invoice, M.Invoice.id == M.CreditNote.invoice_id)
+        .where(
+            *invoice_filter,
+            M.CreditNote.status == M.CREDIT_ISSUED,
+        )
+    ).scalar_one()
+    credited_d = moneylib.ensure_decimal(credited, field="amount")
+
+    outstanding = moneylib.quantize_half_up(grand - allocated_d - credited_d)
+    if outstanding < 0:
+        # Data integrity guard; should not happen under allocation caps.
+        outstanding = Decimal("0.00")
+    return count, outstanding
+
+
+def location_payments_in_interval(
+    db: DBSession,
+    *,
+    tenant_id: uuid.UUID,
+    location_id: uuid.UUID,
+    start_utc: datetime,
+    end_utc: datetime,
+) -> tuple[int, Decimal]:
+    """Complete payment totals for a location interval. Excludes refunded."""
+    from app.platform.time import as_utc
+
+    start = as_utc(start_utc)
+    end = as_utc(end_utc)
+    row = db.execute(
+        select(
+            func.count(),
+            func.coalesce(func.sum(M.Payment.amount), 0),
+        ).where(
+            M.Payment.tenant_id == tenant_id,
+            M.Payment.location_id == location_id,
+            M.Payment.received_at >= start,
+            M.Payment.received_at < end,
+            M.Payment.status != M.PAYMENT_REFUNDED,
+        )
+    ).one()
+    count = int(row[0])
+    amount = moneylib.quantize_half_up(moneylib.ensure_decimal(row[1], field="amount"))
+    return count, amount
 
 
 def refresh_invoice_payment_state(db: DBSession, *, invoice: Invoice) -> Invoice:

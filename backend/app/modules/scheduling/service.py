@@ -12,10 +12,10 @@ implement these rules themselves.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session as DBSession
 
 from app.modules.clinics import service as clinics_service
@@ -112,6 +112,45 @@ def _lock_practitioner(db: DBSession, practitioner_id: uuid.UUID) -> None:
         text("SELECT pg_advisory_xact_lock(hashtext(:key)::bigint)"),
         {"key": f"sched:{practitioner_id}"},
     )
+
+
+def _lock_queue(db: DBSession, *, location_id: uuid.UUID, queue_date: date) -> None:
+    """Serialize token assignment for one location service-day."""
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key)::bigint)"),
+        {"key": f"queue:{location_id}:{queue_date.isoformat()}"},
+    )
+
+
+def _service_date(start_at: datetime, *, timezone_name: str) -> date:
+    tz = resolve_timezone(timezone_name, location_timezone=timezone_name)
+    return start_at.astimezone(tz).date()
+
+
+def _assign_queue_token(db: DBSession, appt: Appointment) -> None:
+    """Assign the next opaque daily token. Idempotent if already assigned.
+
+    Token values are sequential integers — never patient identifiers.
+
+    Sequence key is the location-local **check-in day** (now), not appointment
+    start. Otherwise slots that straddle local midnight each reset to token 1
+    and the reception board cannot order a same-day waiting line.
+    """
+    if appt.queue_token is not None and appt.queue_date is not None:
+        return
+    queue_date = _service_date(_now(), timezone_name=appt.timezone)
+    _lock_queue(db, location_id=appt.location_id, queue_date=queue_date)
+    row = db.execute(
+        text(
+            "SELECT COALESCE(MAX(queue_token), 0) FROM appointments "
+            "WHERE location_id = :loc AND queue_date = :qd"
+        ),
+        {"loc": str(appt.location_id), "qd": queue_date},
+    ).scalar_one()
+    appt.queue_date = queue_date
+    appt.queue_token = int(row) + 1
+    appt.updated_at = _now()
+    db.flush()
 
 
 def _overlap_exists(
@@ -211,7 +250,11 @@ def create_appointment(
     notes: str | None = None,
     idempotency_key: str | None = None,
     location_ids: frozenset[uuid.UUID] | None = None,
+    walk_in: bool = False,
 ) -> Appointment:
+    from app.modules.subscriptions.commercial_policy import assert_business_create
+
+    assert_business_create(db, tenant_id=tenant_id, operation="appointment.create")
     now = _now()
     if idempotency_key:
         existing = db.execute(
@@ -251,9 +294,13 @@ def create_appointment(
         location_ids=location_ids,
     )
     tz = resolve_timezone(timezone_name, location_timezone=location.timezone)
-    start_at, end_at = resolve_interval(start, duration_minutes, tz=tz, now=now)
+    start_at, end_at = resolve_interval(
+        start, duration_minutes, tz=tz, now=now, enforce_future=not walk_in
+    )
     assert_slot_free(db, practitioner_id=practitioner_id, start_at=start_at, end_at=end_at)
     note = (notes or "").strip() or None
+    if walk_in and note is None:
+        note = "walk-in"
     appt = Appointment(
         id=ids.uuid7(),
         tenant_id=tenant_id,
@@ -263,7 +310,7 @@ def create_appointment(
         start_at=start_at,
         end_at=end_at,
         timezone=str(tz.key),
-        status=M.STATUS_SCHEDULED,
+        status=M.STATUS_CHECKED_IN if walk_in else M.STATUS_SCHEDULED,
         notes=note,
         idempotency_key=idempotency_key or None,
         created_by=actor_id,
@@ -272,7 +319,63 @@ def create_appointment(
     )
     db.add(appt)
     db.flush()
+    if walk_in:
+        _assign_queue_token(db, appt)
     return appt
+
+
+def list_free_slots(
+    db: DBSession,
+    *,
+    tenant_id: uuid.UUID,
+    practitioner_id: uuid.UUID,
+    location_id: uuid.UUID,
+    day: date,
+    location_ids: frozenset[uuid.UUID] | None = None,
+) -> tuple[str, int, list[tuple[datetime, datetime]]]:
+    """Return (timezone_name, slot_minutes, free UTC intervals).
+
+    Slot payload never includes patient identifiers or operational notes —
+    only free start/end instants derived from location hours minus live bookings.
+    """
+    if location_ids and location_id not in location_ids:
+        raise ForbiddenError("location is outside your scope")
+    practitioner = db.get(Practitioner, practitioner_id)
+    if practitioner is None or not practitioner.is_active:
+        raise NotFoundError("practitioner not found")
+    if not tenancy_service.is_practitioner_verified(
+        db, tenant_id=tenant_id, practitioner_id=practitioner_id
+    ):
+        raise ForbiddenError("practitioner is not verified for this tenant")
+    location = clinics_service.get_location(db, tenant_id=tenant_id, location_id=location_id)
+    if not location.is_active:
+        raise ValidationError("location is not active")
+    hours = clinics_service.list_working_hours(db, tenant_id=tenant_id, location_id=location_id)
+    weekday = day.weekday()  # Monday=0
+    window = next((h for h in hours if h.weekday == weekday), None)
+    if window is None:
+        return location.timezone, 30, []
+    tz = resolve_timezone(None, location_timezone=location.timezone)
+    start_wall = datetime.combine(day, window.start_local)
+    end_wall = datetime.combine(day, window.end_local)
+    start_instant = start_wall.replace(tzinfo=tz, fold=0).astimezone(UTC)
+    end_instant = end_wall.replace(tzinfo=tz, fold=0).astimezone(UTC)
+    if end_instant <= start_instant:
+        return location.timezone, window.slot_minutes, []
+    slot = timedelta(minutes=window.slot_minutes)
+    now = _now()
+    candidates: list[tuple[datetime, datetime]] = []
+    cursor = start_instant
+    while cursor + slot <= end_instant:
+        slot_end = cursor + slot
+        if slot_end > now:
+            candidates.append((cursor, slot_end))
+        cursor += slot
+    free: list[tuple[datetime, datetime]] = []
+    for s, e in candidates:
+        if not _overlap_exists(db, practitioner_id=practitioner_id, start_at=s, end_at=e):
+            free.append((s, e))
+    return location.timezone, window.slot_minutes, free
 
 
 def get_appointment(
@@ -291,6 +394,7 @@ def list_appointments(
     location_ids: frozenset[uuid.UUID] | None = None,
     practitioner_id: uuid.UUID | None = None,
     location_id: uuid.UUID | None = None,
+    patient_id: uuid.UUID | None = None,
     status: str | None = None,
     start_from: datetime | None = None,
     start_to: datetime | None = None,
@@ -309,6 +413,8 @@ def list_appointments(
         q = q.where(Appointment.practitioner_id == practitioner_id)
     if location_id is not None:
         q = q.where(Appointment.location_id == location_id)
+    if patient_id is not None:
+        q = q.where(Appointment.patient_id == patient_id)
     if status is not None:
         if status not in M.STATUSES:
             raise ValidationError("unknown status")
@@ -378,12 +484,18 @@ def transition_appointment(
     appt = get_appointment(db, tenant_id=tenant_id, appointment_id=appointment_id)
     _check_location_scope(location_ids, appt.location_id)
     if appt.status == to_status:
+        # Re-check-in / replay: keep existing token; never reassign.
+        if to_status == M.STATUS_CHECKED_IN:
+            _assign_queue_token(db, appt)
         return appt
     if to_status not in TRANSITIONS[appt.status]:
         raise ValidationError(f"cannot move appointment from {appt.status} to {to_status}")
     appt.status = to_status
     appt.updated_at = _now()
     db.flush()
+    if to_status == M.STATUS_CHECKED_IN:
+        _assign_queue_token(db, appt)
+    # Cancel / no-show / completed: keep token + queue_date for the day board.
     return appt
 
 
@@ -415,3 +527,64 @@ def cancel_appointment(
     appt.updated_at = now
     db.flush()
     return appt
+
+
+def reception_queue(
+    db: DBSession,
+    *,
+    tenant_id: uuid.UUID,
+    location_id: uuid.UUID,
+    queue_date: date | None = None,
+    practitioner_id: uuid.UUID | None = None,
+    location_ids: frozenset[uuid.UUID] | None = None,
+) -> tuple[Location, date, list[Appointment]]:
+    """Today's (or explicit) local service-day appointments for one location.
+
+    Includes:
+    - appointments whose start falls on the local service day (waiting list), and
+    - appointments checked in on that service day (queue_date), even if start_at
+      is after local midnight (evening check-in of a late slot).
+
+    Ordered for the reception board: queue_token (nulls last), then start_at.
+    """
+    _check_location_scope(location_ids, location_id)
+    location = clinics_service.get_location(db, tenant_id=tenant_id, location_id=location_id)
+    tz = resolve_timezone(None, location_timezone=location.timezone)
+    day = queue_date or _now().astimezone(tz).date()
+    start_local = datetime.combine(day, datetime.min.time()).replace(tzinfo=tz)
+    end_local = start_local + timedelta(days=1)
+    start_utc = start_local.astimezone(UTC)
+    end_utc = end_local.astimezone(UTC)
+    by_start, _ = list_appointments(
+        db,
+        tenant_id=tenant_id,
+        location_ids=location_ids,
+        location_id=location_id,
+        practitioner_id=practitioner_id,
+        start_from=start_utc,
+        start_to=end_utc,
+        limit=200,
+    )
+    # Checked-in-today rows may have start_at outside the local calendar window
+    # (e.g. slot just after midnight). Merge by id.
+    q = select(Appointment).where(
+        Appointment.tenant_id == tenant_id,
+        Appointment.location_id == location_id,
+        Appointment.queue_date == day,
+    )
+    if practitioner_id is not None:
+        q = q.where(Appointment.practitioner_id == practitioner_id)
+    checked_today = list(db.execute(q).scalars().all())
+    merged: dict[uuid.UUID, Appointment] = {a.id: a for a in by_start}
+    for a in checked_today:
+        merged[a.id] = a
+    items = list(merged.values())
+    items.sort(
+        key=lambda a: (
+            a.queue_token is None,
+            a.queue_token or 0,
+            a.start_at,
+            a.id.int,
+        )
+    )
+    return location, day, items

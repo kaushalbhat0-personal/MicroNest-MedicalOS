@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {
     "@healthcare-os/ui": "*",
@@ -22,13 +24,14 @@
     "@tailwindcss/postcss": "^4.3.4",
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^1.67.0",
-    "next": "^16.4.3",
+    "next": "^16.4.6",
     "postcss": "^8.5.23",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "tailwindcss": "^4.3.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.9",
@@ -39,6 +42,6 @@
     "jsdom": "^29.1.1",
     "typescript": "5.7.2",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.12"
   }
 }

@@ -40,6 +40,10 @@ APP_TABLES = [
     "tenant_owners",
     "subscription_plans",
     "subscriptions",
+    "subscription_events",
+    "saas_customers",
+    "saas_payment_transactions",
+    "saas_webhook_inbox",
     "tenant_specialties",
     "workspace_provisions",
     # outbox_events deliberately excluded from app writes via API; the worker
@@ -103,10 +107,20 @@ def cmd_bootstrap(args: argparse.Namespace) -> None:
             tenant = tenancy_service.create_tenant(session, name=args.tenant_name, slug=args.slug)
             from app.modules.clinics import service as clinics_service
 
-            clinics_service.create_location(session, tenant=tenant, name=args.location)
+            # Ops bootstrap predates commercial subscription assignment;
+            # capacity is not gated here (P2.2). Prefer workspace provision
+            # for trial-backed tenants.
+            clinics_service.create_location(
+                session, tenant=tenant, name=args.location, enforce_capacity=False
+            )
             role = tenancy_service.get_seed_role(session, "tenant_admin")
             tenancy_service.create_membership(
-                session, user=user, tenant=tenant, role=role, is_primary=True
+                session,
+                user=user,
+                tenant=tenant,
+                role=role,
+                is_primary=True,
+                enforce_capacity=False,
             )
             identity_service.record_auth_event(
                 session, action="bootstrap", user_id=user.id, tenant_id=tenant.id

@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 import sqlalchemy as sa
-from sqlalchemy import TIMESTAMP, ForeignKey, Index, String
+from sqlalchemy import TIMESTAMP, Date, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,6 +63,10 @@ class Appointment(Base):
     # Operational note only (e.g. "bring prior reports"). Never clinical
     # content, never copied to audit/outbox payloads.
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Reception queue: opaque daily token (no PHI). Assigned on check-in /
+    # walk-in; unique per (location_id, queue_date) while non-null.
+    queue_token: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    queue_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     cancelled_by: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
@@ -83,5 +87,19 @@ class Appointment(Base):
             "idempotency_key",
             unique=True,
             postgresql_where=sa.text("idempotency_key IS NOT NULL"),
+        ),
+        Index(
+            "uq_appointments_location_queue_day_token",
+            "location_id",
+            "queue_date",
+            "queue_token",
+            unique=True,
+            postgresql_where=sa.text("queue_token IS NOT NULL"),
+        ),
+        Index(
+            "ix_appointments_location_queue_date",
+            "location_id",
+            "queue_date",
+            postgresql_where=sa.text("queue_date IS NOT NULL"),
         ),
     )

@@ -60,6 +60,28 @@ def my_tenants(
     return tenant_options(db, user)
 
 
+@router.get(
+    "/tenants/{tenant_id}/workspace-context",
+    response_model=S.WorkspaceContextResponse,
+)
+def workspace_context(
+    tenant_id: uuid.UUID,
+    ctx: RequestContext = Depends(require(P.TENANT_READ)),  # noqa: B008
+) -> S.WorkspaceContextResponse:
+    """Return the caller's effective permissions for this tenant.
+
+    X-Tenant selects the membership; permissions are never client-supplied.
+    """
+    match_tenant(ctx, tenant_id)
+    return S.WorkspaceContextResponse(
+        tenant_id=ctx.tenant_id,
+        membership_id=ctx.membership_id,
+        role=ctx.role,
+        permissions=sorted(ctx.permissions),
+        location_ids=sorted(ctx.location_ids),
+    )
+
+
 @router.get("/tenants/{tenant_id}", response_model=S.TenantDetailResponse)
 def get_tenant(
     tenant_id: uuid.UUID,
@@ -115,6 +137,38 @@ def create_location(
     )
 
 
+@router.patch(
+    "/tenants/{tenant_id}/locations/{location_id}",
+    response_model=S.LocationResponse,
+)
+def patch_location_active(
+    tenant_id: uuid.UUID,
+    location_id: uuid.UUID,
+    body: S.LocationActiveUpdateRequest,
+    ctx: RequestContext = Depends(require(P.LOCATIONS_MANAGE)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.LocationResponse:
+    """Activate or deactivate a location. Reactivation is capacity-gated."""
+    match_tenant(ctx, tenant_id)
+    loc = clinics_service.set_location_active(
+        db, tenant_id=tenant_id, location_id=location_id, is_active=body.is_active
+    )
+    _audit(
+        db,
+        ctx,
+        action="location.activate" if body.is_active else "location.deactivate",
+        rtype="location",
+        rid=str(loc.id),
+    )
+    return S.LocationResponse(
+        id=loc.id,
+        tenant_id=loc.tenant_id,
+        name=loc.name,
+        timezone=loc.timezone,
+        is_active=loc.is_active,
+    )
+
+
 @router.get("/tenants/{tenant_id}/locations", response_model=list[S.LocationResponse])
 def list_locations(
     tenant_id: uuid.UUID,
@@ -135,6 +189,67 @@ def list_locations(
         )
         for loc in locs
     ]
+
+
+@router.get(
+    "/tenants/{tenant_id}/locations/{location_id}/working-hours",
+    response_model=S.WorkingHoursResponse,
+)
+def get_working_hours(
+    tenant_id: uuid.UUID,
+    location_id: uuid.UUID,
+    ctx: RequestContext = Depends(require(P.TENANT_READ)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.WorkingHoursResponse:
+    match_tenant(ctx, tenant_id)
+    if ctx.location_ids and location_id not in ctx.location_ids:
+        raise NotFoundError("location not found")
+    rows = clinics_service.list_working_hours(db, tenant_id=tenant_id, location_id=location_id)
+    return S.WorkingHoursResponse(
+        location_id=location_id,
+        windows=[
+            S.WorkingHoursWindow(
+                weekday=r.weekday,
+                start_local=r.start_local,
+                end_local=r.end_local,
+                slot_minutes=r.slot_minutes,
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.put(
+    "/tenants/{tenant_id}/locations/{location_id}/working-hours",
+    response_model=S.WorkingHoursResponse,
+)
+def put_working_hours(
+    tenant_id: uuid.UUID,
+    location_id: uuid.UUID,
+    body: S.WorkingHoursReplaceRequest,
+    ctx: RequestContext = Depends(require(P.LOCATIONS_MANAGE)),  # noqa: B008
+    db: DBSession = Depends(get_db),  # noqa: B008
+) -> S.WorkingHoursResponse:
+    match_tenant(ctx, tenant_id)
+    rows = clinics_service.replace_working_hours(
+        db,
+        tenant_id=tenant_id,
+        location_id=location_id,
+        windows=[w.model_dump() for w in body.windows],
+    )
+    _audit(db, ctx, action="location.working_hours.replace", rtype="location", rid=str(location_id))
+    return S.WorkingHoursResponse(
+        location_id=location_id,
+        windows=[
+            S.WorkingHoursWindow(
+                weekday=r.weekday,
+                start_local=r.start_local,
+                end_local=r.end_local,
+                slot_minutes=r.slot_minutes,
+            )
+            for r in rows
+        ],
+    )
 
 
 @router.post("/tenants/{tenant_id}/roles", response_model=S.RoleResponse)
@@ -288,7 +403,13 @@ def create_invite(
     role = _role_by_name(db, tenant_id, body.role)
     inviter = db.get(User, ctx.user_id)
     inv, raw = tenancy_service.create_invitation(
-        db, tenant=t, email=str(body.email), role=role, invited_by=inviter
+        db,
+        tenant=t,
+        email=str(body.email),
+        role=role,
+        invited_by=inviter,
+        ttl_days=body.ttl_days,
+        location_ids=body.location_ids,
     )
     notify_service.request_notification(
         db,

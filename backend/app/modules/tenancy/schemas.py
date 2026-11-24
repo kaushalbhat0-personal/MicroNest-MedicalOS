@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ class PlanLimits(BaseModel):
     max_locations: int
     max_practitioners: int
     max_staff_seats: int
-    enforced: bool = False
+    enforced: bool = True
 
 
 class SubscriptionSummary(BaseModel):
@@ -80,12 +80,46 @@ class LocationCreateRequest(BaseModel):
     timezone: str = Field(default="Asia/Kolkata", max_length=64)
 
 
+class LocationActiveUpdateRequest(BaseModel):
+    is_active: bool
+
+
 class LocationResponse(BaseModel):
     id: uuid.UUID
     tenant_id: uuid.UUID
     name: str
     timezone: str
     is_active: bool
+
+
+class WorkingHoursWindow(BaseModel):
+    weekday: int = Field(ge=0, le=6)
+    start_local: time
+    end_local: time
+    slot_minutes: int = Field(default=30, ge=5, le=480)
+
+
+class WorkingHoursReplaceRequest(BaseModel):
+    windows: list[WorkingHoursWindow] = Field(default_factory=list, max_length=7)
+
+
+class WorkingHoursResponse(BaseModel):
+    location_id: uuid.UUID
+    windows: list[WorkingHoursWindow]
+
+
+class WorkspaceContextResponse(BaseModel):
+    """Current membership capabilities for the selected tenant (X-Tenant).
+
+    Server-derived; used by the shell for permission-aware navigation only.
+    API authorization remains ``require(permission)`` on every route.
+    """
+
+    tenant_id: uuid.UUID
+    membership_id: uuid.UUID
+    role: str
+    permissions: list[str]
+    location_ids: list[uuid.UUID]
 
 
 class RoleCreateRequest(BaseModel):

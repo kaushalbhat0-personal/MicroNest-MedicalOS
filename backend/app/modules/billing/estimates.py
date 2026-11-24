@@ -266,6 +266,11 @@ def create_estimate(
     idempotency_key: str | None = None,
     location_ids: frozenset[uuid.UUID] | None = None,
 ) -> Estimate:
+    from app.modules.subscriptions.commercial_policy import assert_feature
+
+    assert_feature(
+        db, tenant_id=tenant_id, feature_key="clinic_billing", operation="estimate.create"
+    )
     _validate_refs(
         db,
         tenant_id=tenant_id,

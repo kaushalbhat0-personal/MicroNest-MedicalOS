@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+from app.platform.time import to_api_utc
 
 
 class AppointmentCreateRequest(BaseModel):
@@ -20,6 +22,22 @@ class AppointmentCreateRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=500)
     timezone: str | None = Field(default=None, max_length=64)
     idempotency_key: str | None = Field(default=None, max_length=64)
+    # Walk-in: allow start at/near now and auto-check-in after create.
+    walk_in: bool = False
+
+
+class AvailabilitySlot(BaseModel):
+    start_at: datetime
+    end_at: datetime
+
+
+class AvailabilityResponse(BaseModel):
+    practitioner_id: uuid.UUID
+    location_id: uuid.UUID
+    timezone: str
+    date: str
+    slot_minutes: int
+    slots: list[AvailabilitySlot]
 
 
 class AppointmentRescheduleRequest(BaseModel):
@@ -46,14 +64,35 @@ class AppointmentResponse(BaseModel):
     timezone: str
     status: str
     notes: str | None
+    queue_token: int | None = None
+    queue_date: date | None = None
     cancelled_at: datetime | None
     cancelled_by: uuid.UUID | None
     cancel_reason: str | None
     created_at: datetime
     updated_at: datetime
 
+    @field_serializer("start_at", "end_at", "created_at", "updated_at", "cancelled_at")
+    def _serialize_instants(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        return to_api_utc(value)
+
 
 class AppointmentListResponse(BaseModel):
     items: list[AppointmentResponse]
     # Keyset cursor: pass back as `cursor` to fetch the next page. Null = end.
     next_cursor: uuid.UUID | None
+
+
+class ReceptionQueueResponse(BaseModel):
+    """Location-scoped daily reception board (refs + status + token only)."""
+
+    location_id: uuid.UUID
+    queue_date: date
+    timezone: str
+    waiting: list[AppointmentResponse]
+    checked_in: list[AppointmentResponse]
+    completed: list[AppointmentResponse]
+    no_show: list[AppointmentResponse]
+    cancelled: list[AppointmentResponse]

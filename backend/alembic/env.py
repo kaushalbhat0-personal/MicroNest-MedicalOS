@@ -20,7 +20,16 @@ from app.modules.identity.models import (  # noqa: F401
     Session,
     User,
 )
-from app.modules.subscriptions.models import Subscription, SubscriptionPlan  # noqa: F401
+from app.modules.saas_payments.models import (  # noqa: F401
+    SaasCustomer,
+    SaasPaymentTransaction,
+    SaasWebhookInbox,
+)
+from app.modules.subscriptions.models import (  # noqa: F401
+    Subscription,
+    SubscriptionEvent,
+    SubscriptionPlan,
+)
 from app.modules.tenancy.models import (  # noqa: F401
     Invitation,
     Membership,

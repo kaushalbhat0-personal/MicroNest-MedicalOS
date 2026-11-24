@@ -57,7 +57,9 @@ export default function PortalDentalPage() {
         {plans.loading ? (
           <LoadingState label="Loading treatment plans" />
         ) : (plans.data ?? []).length === 0 ? (
-          <EmptyState title="No treatment plans" />
+          <EmptyState title="No published treatment plans">
+            Draft plans stay with your clinic until they are shared with you.
+          </EmptyState>
         ) : (
           <Table
             caption="Treatment plans"

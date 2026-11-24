@@ -14,8 +14,10 @@ import {
   Table,
   Td,
   Th,
+  WhatsAppShareAction,
 } from "@healthcare-os/ui";
-import { api } from "@/lib/api";
+import { api, type Me } from "@/lib/api";
+import { staffInviteMessage, staffInviteShareUrl } from "@/lib/shareLinks";
 import { getSelectedTenant } from "@/lib/tenant";
 import { Shell } from "../shell";
 
@@ -36,8 +38,16 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("receptionist");
+  const [invitePhone, setInvitePhone] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [clinicName, setClinicName] = useState("your clinic");
+  const [inviteShare, setInviteShare] = useState<{
+    email: string;
+    link: string;
+    message: string;
+    phone: string;
+  } | null>(null);
 
   useEffect(() => {
     const t = getSelectedTenant();
@@ -46,6 +56,13 @@ export default function TeamPage() {
       return;
     }
     setTenant(t);
+    api
+      .get<Me>("/api/v1/auth/me")
+      .then((me) => {
+        const match = me.tenants.find((x) => x.id === t);
+        if (match?.name) setClinicName(match.name);
+      })
+      .catch(() => undefined);
     api
       .get<Member[]>(`/api/v1/tenants/${t}/memberships`, t)
       .then((m) => {
@@ -63,13 +80,29 @@ export default function TeamPage() {
     if (!tenant) return;
     setError("");
     setMessage("");
+    setInviteShare(null);
     try {
-      const res = await api.post<{ token: string; email: string }>(
+      const res = await api.post<{ token: string; email: string; expires_at?: string }>(
         `/api/v1/tenants/${tenant}/invites`,
         { email, role },
         tenant,
       );
-      setMessage(`Invitation created for ${res.email}. Share this once: ${res.token}`);
+      const link = staffInviteShareUrl(res.token);
+      setInviteShare({
+        email: res.email,
+        link,
+        phone: invitePhone.trim(),
+        message: staffInviteMessage({
+          clinicName,
+          inviteUrl: link,
+          expiresAt: res.expires_at,
+        }),
+      });
+      setMessage(
+        `Invitation created for ${res.email}. Share once via WhatsApp or Copy link.${
+          res.expires_at ? ` Expires ${new Date(res.expires_at).toLocaleString()}.` : ""
+        }`,
+      );
       setEmail("");
     } catch (err) {
       setError((err as Error).message);
@@ -190,11 +223,32 @@ export default function TeamPage() {
               />
             )}
           </Field>
+          <Field label="WhatsApp phone (optional)" htmlFor="inv-phone">
+            {() => (
+              <Input
+                id="inv-phone"
+                type="tel"
+                value={invitePhone}
+                onChange={(e) => setInvitePhone(e.target.value)}
+                placeholder="+91…"
+                autoComplete="tel"
+              />
+            )}
+          </Field>
           <p>
             <Button type="submit">Create invitation</Button>
           </p>
         </form>
         {message ? <Alert tone="success">{message}</Alert> : null}
+        {inviteShare ? (
+          <WhatsAppShareAction
+            title="Share invitation"
+            contextLabel={`Invitation for ${inviteShare.email}. Single-use; do not forward broadly.`}
+            initialPhone={inviteShare.phone}
+            initialMessage={inviteShare.message}
+            linkToCopy={inviteShare.link}
+          />
+        ) : null}
       </Card>
     </Shell>
   );

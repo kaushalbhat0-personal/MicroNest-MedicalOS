@@ -36,6 +36,8 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
+      variant="portal"
+      brand="My Care"
       nav={PORTAL_NAV}
       currentPath={pathname}
       tenant={me.data?.tenant_name ?? null}

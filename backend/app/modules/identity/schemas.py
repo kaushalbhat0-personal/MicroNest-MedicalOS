@@ -45,6 +45,8 @@ class SessionInfo(BaseModel):
 class InviteCreateRequest(BaseModel):
     email: EmailStr
     role: str = Field(description="Seed role name or tenant custom role name")
+    location_ids: list[uuid.UUID] | None = None
+    ttl_days: int = Field(default=7, ge=1, le=30)
 
 
 class InviteCreateResponse(BaseModel):
@@ -59,6 +61,10 @@ class InviteAcceptRequest(BaseModel):
     token: str
     display_name: str
     password: str = Field(min_length=MIN_PASSWORD_LENGTH)
+
+
+class InviteAcceptAuthenticatedRequest(BaseModel):
+    token: str
 
 
 class PasswordResetRequest(BaseModel):

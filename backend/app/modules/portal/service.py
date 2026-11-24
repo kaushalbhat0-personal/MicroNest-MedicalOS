@@ -67,6 +67,13 @@ def enroll_patient_user(
     if not patient.is_active:
         raise ConflictError("patient is not active")
 
+    from app.modules.subscriptions.commercial_policy import assert_portal_enroll
+
+    # New enrollments are staff-side expansion: require operating commercial
+    # status + patient_portal feature. Existing portal access is not revoked
+    # by commercial delinquency (see portal_ctx).
+    assert_portal_enroll(db, tenant_id=tenant_id)
+
     email = identity_service.normalize_email(email)
     user = identity_service.get_user_by_email(db, email)
     if user is None:
@@ -129,7 +136,9 @@ def revoke_link(db: DBSession, *, tenant_id: uuid.UUID, link_id: uuid.UUID) -> P
 
 # Permissions that belong to the patient portal allow-list. A membership
 # counts as provider access when its role grants anything beyond these.
-PORTAL_ONLY_PERMS = frozenset({P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL})
+PORTAL_ONLY_PERMS = frozenset(
+    {P.PORTAL_READ, P.PORTAL_APPOINTMENT_CANCEL, P.PORTAL_APPOINTMENT_BOOK}
+)
 
 
 def workspaces_for_user(db: DBSession, *, user_id: uuid.UUID) -> dict[str, bool]:

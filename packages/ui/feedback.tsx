@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Button } from "./Button";
 import { TONE_ICONS, presentStatus, type StatusTone } from "./status";
 
 export function Badge({
@@ -106,6 +107,7 @@ export function ErrorState({
   title = "Something went wrong",
   children,
   onRetry,
+  retryLabel = "Try again",
 }: {
   title?: string;
   children?: React.ReactNode;
@@ -118,9 +120,9 @@ export function ErrorState({
       {children ? <p>{children}</p> : null}
       {onRetry ? (
         <p>
-          <button type="button" className="hos-btn" data-variant="secondary" onClick={onRetry}>
-            Try again
-          </button>
+          <Button type="button" variant="secondary" onClick={onRetry}>
+            {retryLabel}
+          </Button>
         </p>
       ) : null}
     </div>

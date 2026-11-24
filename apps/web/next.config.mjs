@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow Playwright / local tools that hit 127.0.0.1 while `next dev` binds localhost.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   // P4.8: same hardening headers as the API (see
   // backend/app/platform/security_headers.py). HSTS is gated on COOKIE_SECURE
   // so plain-HTTP dev never sends a false HTTPS promise.

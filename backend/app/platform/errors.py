@@ -32,6 +32,27 @@ class ConflictError(DomainError):
     status = 409
 
 
+class EntitlementExceededError(ConflictError):
+    """Plan capacity or commercial write eligibility denied.
+
+    Subclasses ConflictError (409) so existing clients treating capacity races
+    as conflicts keep working. ``code`` distinguishes entitlement denials.
+    """
+
+    code = "entitlement_exceeded"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        entitlement_key: str | None = None,
+        reason_code: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.entitlement_key = entitlement_key
+        self.reason_code = reason_code
+
+
 class RateLimitError(DomainError):
     code = "rate_limited"
     status = 429

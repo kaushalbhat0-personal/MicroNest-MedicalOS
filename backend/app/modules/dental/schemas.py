@@ -176,7 +176,9 @@ class RecallResponse(BaseModel):
 
 class DocumentRefCreateRequest(BaseModel):
     doc_type: str = Field(default="other", max_length=32)
-    storage_key: str = Field(min_length=1, max_length=500)
+    # Deprecated: ignored for object selection. Server allocates the key.
+    # Malformed hints (path traversal) are rejected; any other value is discarded.
+    storage_key: str | None = Field(default=None, max_length=500)
     content_type: str | None = Field(default=None, max_length=127)
     size_bytes: int | None = Field(default=None, ge=0)
     sha256: str | None = Field(default=None, max_length=64)

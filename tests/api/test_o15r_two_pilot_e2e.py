@@ -422,11 +422,12 @@ def test_subscription_and_specialty_visibility_per_tenant(client, owner_db) -> N
         ends = datetime.fromisoformat(sub["trial_ends_at"].replace("Z", "+00:00"))
         assert (ends - starts).days == 14
         assert sub["is_in_trial"] is True
+        # P2.2+: capacity limits are enforced (staff/locations/practitioners).
         assert sub["limits"] == {
             "max_locations": 3,
             "max_practitioners": 10,
             "max_staff_seats": 25,
-            "enforced": False,
+            "enforced": True,
         }
     by_code_a = {
         s["code"]: s
@@ -632,7 +633,7 @@ def test_platform_console_lists_both_pilots(client, owner_db, make_owner_user) -
     for slug in ("pilot-alpha-dental-plat", "pilot-beta-eye-plat"):
         item = by_slug[slug]
         assert item["subscription"]["plan_code"] == "trial-14d"
-        assert item["subscription"]["limits"]["enforced"] is False
+        assert item["subscription"]["limits"]["enforced"] is True
     assert by_slug["pilot-alpha-dental-plat"]["specialties_enabled"] == ["dental"]
     assert by_slug["pilot-beta-eye-plat"]["specialties_enabled"] == ["ophthalmology"]
     # Pagination + status filter behave.
