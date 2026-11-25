@@ -1,10 +1,25 @@
+import {
+  apiNoStoreHeaderRules,
+  apiRewriteRules,
+  resolveApiRewriteUpstream,
+} from "./lib/apiProxyConfig.mjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Allow Playwright / local tools that hit 127.0.0.1 while `next dev` binds localhost.
   allowedDevOrigins: ["127.0.0.1", "localhost"],
-  // P4.8: same hardening headers as the API (see
-  // backend/app/platform/security_headers.py). HSTS is gated on COOKIE_SECURE
-  // so plain-HTTP dev never sends a false HTTPS promise.
+
+  /**
+   * P3.7D.2 — same-origin API proxy (fixed upstream allowlist).
+   * Browser: /api/* on the Vercel (or local Next) origin.
+   * Upstream: allowlisted FastAPI only (no open proxy).
+   */
+  async rewrites() {
+    const upstream = resolveApiRewriteUpstream(process.env);
+    return apiRewriteRules(upstream);
+  },
+
+  // P4.8 hardening + P3.7D.2 no-store on proxied API.
   async headers() {
     const hsts = process.env.COOKIE_SECURE === "true";
     const base = [
@@ -24,7 +39,11 @@ const nextConfig = {
         value: "max-age=31536000; includeSubDomains",
       });
     }
-    return [{ source: "/:path*", headers: base }];
+    return [
+      ...apiNoStoreHeaderRules(),
+      { source: "/:path*", headers: base },
+    ];
   },
 };
+
 export default nextConfig;

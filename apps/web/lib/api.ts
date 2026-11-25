@@ -1,11 +1,11 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { apiUrl, resolveApiBase } from "./apiBase";
 
 export type ApiError = { type: string; title: string; status: number; detail: string };
 
 async function request<T>(path: string, init: RequestInit, tenantId?: string): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (tenantId) headers["X-Tenant"] = tenantId;
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...init,
     headers: { ...headers, ...(init.headers as Record<string, string>) },
     credentials: "include",
@@ -54,3 +54,5 @@ export type Me = {
   email_verified: boolean;
   tenants: TenantOption[];
 };
+
+export { apiUrl, resolveApiBase };

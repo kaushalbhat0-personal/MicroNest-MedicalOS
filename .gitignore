@@ -42,3 +42,10 @@ Thumbs.db
 
 # Docker
 .docker/
+
+.vercel
+
+# Local browser/automation artifacts (never commit)
+.playwright-mcp/
+**/playwright-report/
+**/test-results/

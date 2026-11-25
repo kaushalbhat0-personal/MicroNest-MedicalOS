@@ -1,0 +1,419 @@
+@import "@healthcare-os/ui/tokens.css";
+@import "@healthcare-os/ui/components.css";
+
+:root {
+  color-scheme: light;
+  font-family: var(--hos-font-sans, ui-sans-serif, system-ui, sans-serif);
+  color: var(--hos-fg, #0f172a);
+  background: var(--hos-bg, #f8fafc);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.hos-desktop-root {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.hos-desktop-center {
+  display: grid;
+  place-items: center;
+}
+
+.hos-desktop-login,
+.hos-desktop-center .hos-card {
+  width: min(420px, 100%);
+}
+
+.hos-desktop-brand {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--hos-primary, #2563eb);
+  margin-bottom: 8px;
+}
+
+.hos-desktop-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.hos-desktop-sidebar {
+  background: var(--hos-surface, #fff);
+  border-right: 1px solid var(--hos-border, #e2e8f0);
+  padding: 20px 16px;
+}
+
+.hos-desktop-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.hos-nav-group-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--hos-text-muted, #64748b);
+  margin: 0 0 6px;
+}
+
+.hos-nav-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.hos-nav-btn:hover,
+.hos-nav-btn:focus-visible {
+  background: var(--hos-surface-muted, #f1f5f9);
+  outline: 2px solid var(--hos-primary, #2563eb);
+  outline-offset: 1px;
+}
+
+.hos-nav-active {
+  font-weight: 600;
+  background: var(--hos-surface-muted, #f1f5f9);
+}
+
+.hos-nav-muted {
+  color: var(--hos-text-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.hos-desktop-crumbs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  color: var(--hos-text-muted, #64748b);
+  border-bottom: 1px solid var(--hos-border, #e2e8f0);
+}
+
+.hos-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hos-metric-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.hos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.hos-table th,
+.hos-table td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--hos-border, #e2e8f0);
+}
+
+.hos-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.hos-notif {
+  opacity: 0.4;
+  padding: 0 8px;
+}
+
+.hos-desktop-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hos-desktop-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hos-border, #e2e8f0);
+  background: var(--hos-surface, #fff);
+}
+
+.hos-desktop-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.hos-desktop-content {
+  padding: 24px;
+}
+
+.hos-desktop-meta {
+  margin-top: 24px;
+  color: var(--hos-text-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.hos-muted {
+  color: var(--hos-text-muted, #64748b);
+}
+
+.hos-caption {
+  font-size: 0.75rem;
+  color: var(--hos-text-muted, #64748b);
+  margin-top: 16px;
+}
+
+.hos-field + .hos-field {
+  margin-top: 12px;
+}
+
+form .hos-button,
+form button {
+  margin-top: 16px;
+}
+
+.hos-module-header {
+  margin-bottom: 16px;
+}
+
+.hos-module-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+}
+
+.hos-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.hos-patients-layout,
+.hos-schedule-layout,
+.hos-reception-layout,
+.hos-billing-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.hos-billing-layout {
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+}
+
+.hos-staff-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.hos-metric-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.hos-token-block {
+  display: block;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: var(--hos-surface-muted, #f1f5f9);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.hos-row-selected td {
+  background: var(--hos-surface-muted, #f1f5f9);
+}
+
+.hos-att-correct {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hos-border, #e2e8f0);
+}
+
+@media (max-width: 1100px) {
+  .hos-patients-layout,
+  .hos-schedule-layout,
+  .hos-reception-layout,
+  .hos-billing-layout,
+  .hos-staff-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hos-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--hos-primary, #2563eb);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hos-link-btn:focus-visible {
+  outline: 2px solid var(--hos-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+.hos-pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.hos-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hos-timeline-item {
+  padding: 10px 12px;
+  border-left: 3px solid var(--hos-primary, #2563eb);
+  background: var(--hos-surface-muted, #f1f5f9);
+}
+
+.hos-timeline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.hos-badge-soft {
+  background: var(--hos-surface, #fff);
+  border: 1px solid var(--hos-border, #e2e8f0);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.75rem;
+}
+
+.hos-dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.hos-dl div {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px;
+}
+
+.hos-dl dt {
+  color: var(--hos-text-muted, #64748b);
+  margin: 0;
+}
+
+.hos-dl dd {
+  margin: 0;
+}
+
+.hos-cal-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.hos-cal-week {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.hos-cal-day h3 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+}
+
+.hos-cal-appt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--hos-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+  background: var(--hos-surface, #fff);
+  cursor: pointer;
+  font: inherit;
+}
+
+.hos-cal-appt:hover,
+.hos-cal-appt:focus-visible {
+  outline: 2px solid var(--hos-primary, #2563eb);
+}
+
+.hos-cal-checked_in {
+  border-left: 4px solid #059669;
+}
+
+.hos-cal-cancelled,
+.hos-cal-no_show {
+  opacity: 0.65;
+}
+
+.hos-cal-completed {
+  border-left: 4px solid #64748b;
+}
+
+.hos-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hos-patient-profile .hos-card {
+  margin-bottom: 12px;
+}
+
+.hos-consult-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.hos-consult-workspace .hos-card {
+  margin-bottom: 12px;
+}
+
+.hos-consult-workspace form .hos-field {
+  margin-top: 8px;
+}

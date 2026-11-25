@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimal capabilities for Healthcare OS clinic desktop",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

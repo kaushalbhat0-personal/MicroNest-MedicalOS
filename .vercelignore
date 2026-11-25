@@ -1,0 +1,19 @@
+# Keep Preview uploads small; Vercel installs deps remotely.
+.venv
+**/.venv
+**/node_modules
+**/.next
+**/test-results
+**/playwright-report
+.playwright-mcp
+**/__pycache__
+**/*.pyc
+backend
+scripts
+docs
+.git
+.env
+.env.*
+!.env.example
+apps/web/.env*
+apps/web/.env.local

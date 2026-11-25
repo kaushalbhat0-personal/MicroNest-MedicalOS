@@ -4,12 +4,15 @@
   "private": true,
   "workspaces": [
     "apps/web",
+    "apps/desktop",
     "packages/*"
   ],
   "scripts": {
     "web:dev": "npm run dev -w @healthcare-os/web",
     "web:build": "npm run build -w @healthcare-os/web",
     "web:typecheck": "npm run typecheck -w @healthcare-os/web",
+    "desktop:dev": "npm run tauri -w @healthcare-os/desktop -- dev",
+    "desktop:build": "npm run tauri -w @healthcare-os/desktop -- build",
     "ui:typecheck": "npm run typecheck -w @healthcare-os/ui",
     "ui:test": "npm run test -w @healthcare-os/ui"
   }
