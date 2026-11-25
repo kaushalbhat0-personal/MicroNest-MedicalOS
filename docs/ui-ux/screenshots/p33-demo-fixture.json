@@ -1,0 +1,9 @@
+{
+  "owner_email": "p33.demo.owner@example.com",
+  "tenant_id": "01a20ea0-6030-702f-8127-11fd199685b7",
+  "patient_id": "01a20ea0-98f3-73e3-a1c9-f96e8f035a9c",
+  "location_id": "01a20ea0-6030-7c4f-b4cf-67fd21da23b3",
+  "practitioner_id": "01a20e77-cba9-7561-9261-dd7585009ac8",
+  "encounter_id": "01a20ea0-a911-7b7e-b5dd-6588ec6b0318",
+  "plan_id": null
+}

@@ -1,0 +1,12 @@
+{
+  "checks": {
+    "mock_api_health": "PASS",
+    "login_returns_bearer": "PASS",
+    "authenticated_me": "PASS",
+    "logout_clears_memory_session": "PASS",
+    "post_logout_me_rejected": "PASS"
+  },
+  "token_logged": false,
+  "backend": "poc-mock-api",
+  "timestamp": "2026-11-25T10:28:56Z"
+}

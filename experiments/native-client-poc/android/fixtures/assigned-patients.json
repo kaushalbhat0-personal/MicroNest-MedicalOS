@@ -1,0 +1,19 @@
+{
+  "generated_for": "A1 Android PoC — synthetic only",
+  "patients": [
+    {
+      "id": "syn-pat-001",
+      "display_name": "Alex Synthetic",
+      "mrn": "SYN-1001",
+      "assigned": true,
+      "next_appointment": "2099-01-15T09:00:00Z"
+    },
+    {
+      "id": "syn-pat-002",
+      "display_name": "Jordan Fixture",
+      "mrn": "SYN-1002",
+      "assigned": true,
+      "next_appointment": "2099-01-16T14:30:00Z"
+    }
+  ]
+}

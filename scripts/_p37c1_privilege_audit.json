@@ -1,0 +1,827 @@
+{
+  "db_identity": {
+    "owner_url_shape": {
+      "user": "hos_owner.dimhmkfiqdlpxiafqnxl",
+      "host": "aws-1-eu-west-3.pooler.supabase.com",
+      "db": "healthcare_os_preview",
+      "sslmode": "require"
+    },
+    "app_url_shape": {
+      "user": "hos_app.dimhmkfiqdlpxiafqnxl",
+      "host": "aws-1-eu-west-3.pooler.supabase.com",
+      "db": "healthcare_os_preview",
+      "sslmode": "require"
+    },
+    "postgres_url_shape": {
+      "user": "postgres.dimhmkfiqdlpxiafqnxl",
+      "host": "aws-1-eu-west-3.pooler.supabase.com",
+      "db": "healthcare_os_preview",
+      "sslmode": "require"
+    },
+    "current_database": "healthcare_os_preview",
+    "alembic_revision": "0027_saas_payment_reliability"
+  },
+  "roles": {
+    "anon": {
+      "rolname": "anon",
+      "rolsuper": false,
+      "rolbypassrls": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolcanlogin": false,
+      "rolinherit": true
+    },
+    "authenticated": {
+      "rolname": "authenticated",
+      "rolsuper": false,
+      "rolbypassrls": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolcanlogin": false,
+      "rolinherit": true
+    },
+    "authenticator": {
+      "rolname": "authenticator",
+      "rolsuper": false,
+      "rolbypassrls": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolcanlogin": true,
+      "rolinherit": false
+    },
+    "hos_app": {
+      "rolname": "hos_app",
+      "rolsuper": false,
+      "rolbypassrls": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolcanlogin": true,
+      "rolinherit": true
+    },
+    "hos_owner": {
+      "rolname": "hos_owner",
+      "rolsuper": false,
+      "rolbypassrls": true,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolcanlogin": true,
+      "rolinherit": true
+    },
+    "postgres": {
+      "rolname": "postgres",
+      "rolsuper": false,
+      "rolbypassrls": true,
+      "rolcreatedb": true,
+      "rolcreaterole": true,
+      "rolcanlogin": true,
+      "rolinherit": true
+    }
+  },
+  "schema": {
+    "table_owners": [
+      {
+        "owner": "hos_owner",
+        "count": 75
+      }
+    ],
+    "public_table_count": 75,
+    "key_table_grants": [
+      {
+        "grantee": "hos_app",
+        "table": "estimates",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_app",
+        "table": "invoices",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_app",
+        "table": "memberships",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_app",
+        "table": "patients",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_app",
+        "table": "payments",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_app",
+        "table": "roles",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_app",
+        "table": "tenants",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_app",
+        "table": "treatment_plans",
+        "privileges": "DELETE,INSERT,SELECT,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "alembic_version",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "estimates",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "invoices",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "memberships",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "patients",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "payments",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "roles",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "tenants",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      },
+      {
+        "grantee": "hos_owner",
+        "table": "treatment_plans",
+        "privileges": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+      }
+    ],
+    "hos_app_usage": "{'usage': True, 'create': False}",
+    "hos_owner_usage": "{'usage': True, 'create': True}"
+  },
+  "rls": {
+    "tables": [
+      {
+        "table": "alembic_version",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "appointments",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "attendance_records",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "audit_events",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "auth_events",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "clinical_notes",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "communication_consents",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "communication_logs",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "consents",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "credentials",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "credit_notes",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "dental_conditions",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "dental_procedure_records",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "dental_procedures",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "diagnosis_codes",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "document_references",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "email_verifications",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "encounter_diagnoses",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "encounters",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "estimate_lines",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "estimates",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "follow_ups",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "goods_receipt_lines",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "goods_receipts",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "inventory_balances",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "inventory_items",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "inventory_movements",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "inventory_suppliers",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "invitations",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "invoice_lines",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "invoices",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "leave_requests",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "leave_types",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "location_working_hours",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "locations",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "medications",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "membership_locations",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "memberships",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "observation_types",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "observations",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "outbox_events",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "password_resets",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "patients",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "payment_allocations",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "payments",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "portal_links",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "practitioner_verifications",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "practitioners",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "prescription_items",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "prescriptions",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "purchase_order_lines",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "purchase_orders",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "recalls",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "receipts",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "refunds",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "roles",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "saas_customers",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "saas_payment_transactions",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "saas_webhook_inbox",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "service_catalog",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "sessions",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "staff_profiles",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "staff_schedules",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "subscription_events",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "subscription_plans",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "subscriptions",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "tenant_owners",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "tenant_specialties",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "tenants",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "tooth_finding_surfaces",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "tooth_findings",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "treatment_plan_items",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "treatment_plans",
+        "rls": true,
+        "force_rls": true
+      },
+      {
+        "table": "users",
+        "rls": false,
+        "force_rls": false
+      },
+      {
+        "table": "workspace_provisions",
+        "rls": true,
+        "force_rls": true
+      }
+    ],
+    "force_enabled_count": 57,
+    "rls_enabled_count": 57
+  },
+  "seed_roles": {
+    "accountant": {
+      "permission_count": 11,
+      "has_patient_create": false,
+      "has_plan_manage": false,
+      "has_invoice_issue": true,
+      "has_payment_record": true,
+      "has_billing_refund": true,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "billing.config",
+        "billing.create",
+        "billing.read",
+        "billing.refund",
+        "inventory.adjust",
+        "inventory.manage",
+        "inventory.purchase",
+        "inventory.read",
+        "invoice.issue",
+        "payment.record",
+        "tenant.read"
+      ]
+    },
+    "doctor": {
+      "permission_count": 24,
+      "has_patient_create": false,
+      "has_plan_manage": true,
+      "has_invoice_issue": false,
+      "has_payment_record": false,
+      "has_billing_refund": false,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "appointment.read",
+        "appointment.update",
+        "billing.create",
+        "billing.read",
+        "clinical.create",
+        "clinical.read",
+        "communication.consent.manage",
+        "communication.log",
+        "communication.read",
+        "dental.read",
+        "dental.record",
+        "encounter.close",
+        "encounter.open",
+        "encounter.read",
+        "followup.manage",
+        "followup.read",
+        "inventory.adjust",
+        "inventory.read",
+        "patient.read",
+        "plan.manage",
+        "prescription.create",
+        "prescription.read",
+        "prescription.sign",
+        "tenant.read"
+      ]
+    },
+    "nurse": {
+      "permission_count": 12,
+      "has_patient_create": false,
+      "has_plan_manage": false,
+      "has_invoice_issue": false,
+      "has_payment_record": false,
+      "has_billing_refund": false,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "appointment.read",
+        "clinical.create",
+        "clinical.read",
+        "communication.log",
+        "communication.read",
+        "encounter.read",
+        "followup.manage",
+        "followup.read",
+        "inventory.adjust",
+        "inventory.read",
+        "patient.read",
+        "tenant.read"
+      ]
+    },
+    "patient": {
+      "permission_count": 3,
+      "has_patient_create": false,
+      "has_plan_manage": false,
+      "has_invoice_issue": false,
+      "has_payment_record": false,
+      "has_billing_refund": false,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "portal.appointment.book",
+        "portal.appointment.cancel",
+        "portal.read"
+      ]
+    },
+    "platform_admin": {
+      "permission_count": 3,
+      "has_patient_create": false,
+      "has_plan_manage": false,
+      "has_invoice_issue": false,
+      "has_payment_record": false,
+      "has_billing_refund": false,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "platform.health",
+        "platform.tenant.create",
+        "platform.tenant.suspend"
+      ]
+    },
+    "receptionist": {
+      "permission_count": 18,
+      "has_patient_create": true,
+      "has_plan_manage": false,
+      "has_invoice_issue": false,
+      "has_payment_record": true,
+      "has_billing_refund": false,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "appointment.create",
+        "appointment.read",
+        "appointment.update",
+        "billing.read",
+        "communication.consent.manage",
+        "communication.log",
+        "communication.read",
+        "encounter.open",
+        "encounter.read",
+        "followup.manage",
+        "followup.read",
+        "inventory.adjust",
+        "inventory.read",
+        "patient.create",
+        "patient.read",
+        "patient.update",
+        "payment.record",
+        "tenant.read"
+      ]
+    },
+    "staff": {
+      "permission_count": 1,
+      "has_patient_create": false,
+      "has_plan_manage": false,
+      "has_invoice_issue": false,
+      "has_payment_record": false,
+      "has_billing_refund": false,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "tenant.read"
+      ]
+    },
+    "tenant_admin": {
+      "permission_count": 39,
+      "has_patient_create": true,
+      "has_plan_manage": true,
+      "has_invoice_issue": true,
+      "has_payment_record": true,
+      "has_billing_refund": true,
+      "has_bogus_refund_create": false,
+      "permissions": [
+        "appointment.create",
+        "appointment.read",
+        "appointment.update",
+        "audit.read",
+        "billing.config",
+        "billing.create",
+        "billing.read",
+        "billing.refund",
+        "clinical.create",
+        "clinical.read",
+        "communication.consent.manage",
+        "communication.log",
+        "communication.read",
+        "dental.read",
+        "dental.record",
+        "encounter.close",
+        "encounter.open",
+        "encounter.read",
+        "followup.manage",
+        "followup.read",
+        "inventory.adjust",
+        "inventory.manage",
+        "inventory.purchase",
+        "inventory.read",
+        "invoice.issue",
+        "locations.manage",
+        "patient.create",
+        "patient.read",
+        "patient.update",
+        "payment.record",
+        "plan.manage",
+        "prescription.create",
+        "prescription.read",
+        "prescription.sign",
+        "roles.manage",
+        "settings.manage",
+        "staff.invite",
+        "staff.manage",
+        "tenant.read"
+      ]
+    }
+  },
+  "security_definer": [],
+  "default_privileges": [],
+  "hos_app_checks": {
+    "current_user": "hos_app",
+    "bypassrls": false,
+    "ddl_create_table": "DENIED:ProgrammingError",
+    "alembic_update": "DENIED:ProgrammingError",
+    "alembic_select": "DENIED:ProgrammingError",
+    "locations_without_tenant": 0,
+    "patients_without_tenant": 0
+  },
+  "hos_owner_checks": {
+    "current_user": "hos_owner",
+    "bypassrls": true,
+    "seed_roles_visible": 8,
+    "seed_role_update_rowcount": 1
+  },
+  "role_memberships": [
+    {
+      "role": "postgres",
+      "member_of": "anon"
+    },
+    {
+      "role": "postgres",
+      "member_of": "authenticated"
+    },
+    {
+      "role": "postgres",
+      "member_of": "authenticator"
+    },
+    {
+      "role": "postgres",
+      "member_of": "hos_app"
+    },
+    {
+      "role": "postgres",
+      "member_of": "hos_owner"
+    },
+    {
+      "role": "postgres",
+      "member_of": "hos_owner"
+    },
+    {
+      "role": "postgres",
+      "member_of": "pg_create_subscription"
+    },
+    {
+      "role": "postgres",
+      "member_of": "pg_monitor"
+    },
+    {
+      "role": "postgres",
+      "member_of": "pg_read_all_data"
+    },
+    {
+      "role": "postgres",
+      "member_of": "pg_signal_backend"
+    },
+    {
+      "role": "postgres",
+      "member_of": "service_role"
+    },
+    {
+      "role": "postgres",
+      "member_of": "supabase_privileged_role"
+    }
+  ]
+}

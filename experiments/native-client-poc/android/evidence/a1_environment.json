@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-03-25T10:00:00Z",
+  "host": "win32",
+  "node": "v24.11.1",
+  "python": "3.10.11",
+  "java": "NOT_FOUND",
+  "javac": "NOT_FOUND",
+  "adb_on_path": false,
+  "android_sdk_partial": true,
+  "android_sdk_note": "LOCALAPPDATA/Android/Sdk exists (build-tools, cmake, cmdline-tools) but no java/adb on PATH and no emulator/device probed",
+  "rustc": "NOT_FOUND",
+  "cargo": "NOT_FOUND",
+  "capacitor_android_apk_built": false,
+  "keystore_runtime": "NOT_TESTED",
+  "sqlcipher_runtime": "NOT_IMPLEMENTED",
+  "verdict_implication": "A1 cannot PASS encrypted DB + Keystore acceptance criteria on this workstation"
+}

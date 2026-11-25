@@ -1,0 +1,25 @@
+{
+  "phase": "M3",
+  "channel": "development",
+  "api_base": "http://127.0.0.1:8000",
+  "login": true,
+  "workspace_selected": true,
+  "me_email_matches": true,
+  "refresh_file_after_login": {
+    "bytes": 463,
+    "contains_dot_token_shape": false,
+    "exists": true,
+    "looks_like_json_envelope": true
+  },
+  "refresh_rotated": true,
+  "refresh_file_after_rotate": {
+    "bytes": 463,
+    "contains_dot_token_shape": false,
+    "exists": true,
+    "looks_like_json_envelope": true
+  },
+  "me_after_refresh": true,
+  "logout_cleared_dpapi": true,
+  "access_in_memory_after_logout": true,
+  "tokens_in_evidence": false
+}

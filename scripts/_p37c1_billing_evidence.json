@@ -1,0 +1,299 @@
+{
+  "generated_at": "2026-11-24T20:06:34.593654+00:00",
+  "api": "https://micronest-medicalos.onrender.com",
+  "deploy_commit": "293dc668e7117f20a4b88e7a3047aa8e501c99b6",
+  "preserves_p37c_evidence": true,
+  "tenant_slugs_hint": "from .env.p37c.staging /auth/me",
+  "state_ids_present": {
+    "tid_a": true,
+    "tid_b": true,
+    "pid_a": true
+  },
+  "results": [
+    {
+      "id": "R0_login_A",
+      "method": "POST",
+      "route": "/auth/login",
+      "identity": "owner_a",
+      "expected": "200",
+      "status": 200,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "R0_login_B",
+      "method": "POST",
+      "route": "/auth/login",
+      "identity": "owner_b",
+      "expected": "200",
+      "status": 200,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "R1_seed_patient_create",
+      "method": "GET",
+      "route": "/workspace-context",
+      "identity": "owner_a",
+      "expected": "patient.create present",
+      "status": 200,
+      "result": "PASS",
+      "notes": "perm_count=39"
+    },
+    {
+      "id": "R1_seed_plan_manage",
+      "method": "GET",
+      "route": "/workspace-context",
+      "identity": "owner_a",
+      "expected": "plan.manage present",
+      "status": 200,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "R1_no_bogus_refund_create",
+      "method": "GET",
+      "route": "/workspace-context",
+      "identity": "owner_a",
+      "expected": "refund.create absent",
+      "status": 200,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "R1_no_platform_perms",
+      "method": "GET",
+      "route": "/workspace-context",
+      "identity": "owner_a",
+      "expected": "no platform.*",
+      "status": 200,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "R2_list_patients_A",
+      "method": "GET",
+      "route": "/tenants/{A}/patients",
+      "identity": "owner_a",
+      "expected": "200 nonempty",
+      "status": 200,
+      "result": "PASS",
+      "notes": "count=2"
+    },
+    {
+      "id": "R3_A_hdrB_patients",
+      "method": "GET",
+      "route": "/tenants/{B}/patients",
+      "identity": "owner_a",
+      "expected": "403",
+      "status": 403,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "R3_B_hdrA_patients",
+      "method": "GET",
+      "route": "/tenants/{A}/patients",
+      "identity": "owner_b",
+      "expected": "403",
+      "status": 403,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "B0_procedures",
+      "method": "GET",
+      "route": "/dental-procedures",
+      "identity": "owner_a",
+      "expected": "200 with codes",
+      "status": 200,
+      "result": "PASS",
+      "notes": "count=12 code=exam"
+    },
+    {
+      "id": "B1_create_plan",
+      "method": "POST",
+      "route": "/treatment-plans",
+      "identity": "owner_a",
+      "expected": "200/201",
+      "status": 200,
+      "result": "PASS",
+      "notes": "status=draft"
+    },
+    {
+      "id": "B2_activate_plan",
+      "method": "POST",
+      "route": "/treatment-plans/{id}/activate",
+      "identity": "owner_a",
+      "expected": "200 active",
+      "status": 200,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "B3_create_estimate",
+      "method": "POST",
+      "route": "/estimates",
+      "identity": "owner_a",
+      "expected": "200/201 with lines+totals",
+      "status": 200,
+      "result": "PASS",
+      "notes": "grand_total=1750.00 currency=INR lines=2"
+    },
+    {
+      "id": "B4_estimate_totals",
+      "method": "GET",
+      "route": "/estimates/{id}",
+      "identity": "owner_a",
+      "expected": "grand_total=1750.00 INR",
+      "status": 200,
+      "result": "PASS",
+      "notes": "grand_total=1750.00 currency=INR"
+    },
+    {
+      "id": "B5_issue_estimate",
+      "method": "POST",
+      "route": "/estimates/{id}/issue",
+      "identity": "owner_a",
+      "expected": "200 issued",
+      "status": 200,
+      "result": "PASS",
+      "notes": "status=issued"
+    },
+    {
+      "id": "B6_convert_estimate",
+      "method": "POST",
+      "route": "/estimates/{id}/convert",
+      "identity": "owner_a",
+      "expected": "200/201 invoice",
+      "status": 200,
+      "result": "PASS",
+      "notes": "invoice_status=draft grand=1750.00"
+    },
+    {
+      "id": "B7_issue_invoice",
+      "method": "POST",
+      "route": "/invoices/{id}/issue",
+      "identity": "owner_a",
+      "expected": "200 issued with outstanding",
+      "status": 200,
+      "result": "PASS",
+      "notes": "status=issued outstanding=None grand=1750.00 currency=INR"
+    },
+    {
+      "id": "B8_invoice_balance",
+      "method": "GET",
+      "route": "/invoices/{id}",
+      "identity": "owner_a",
+      "expected": "outstanding reflects total",
+      "status": 200,
+      "result": "PASS",
+      "notes": "status=issued outstanding=1750.00 currency=INR keys=['allocated_amount', 'created_at', 'currency', 'doc_number', 'due_date', 'encounter_id', 'financial_year', 'grand_total', 'id', 'lines', 'location_id', 'notes', 'outstanding_amount', 'patient_id', 'source_estimate_id', 'status', 'subtotal', 'tax_total', 'tenant_id', 'updated_at', 'version']"
+    },
+    {
+      "id": "B9_record_payment",
+      "method": "POST",
+      "route": "/payments",
+      "identity": "owner_a",
+      "expected": "200/201 cash recorded",
+      "status": 200,
+      "result": "PASS",
+      "notes": "method=cash amount=1750.00 status=recorded"
+    },
+    {
+      "id": "B10_allocate_payment",
+      "method": "POST",
+      "route": "/payments/{id}/allocations",
+      "identity": "owner_a",
+      "expected": "200",
+      "status": 200,
+      "result": "PASS",
+      "notes": "allocated"
+    },
+    {
+      "id": "B11_invoice_paid",
+      "method": "GET",
+      "route": "/invoices/{id}",
+      "identity": "owner_a",
+      "expected": "outstanding 0 / paid status",
+      "status": 200,
+      "result": "PASS",
+      "notes": "status=paid outstanding=None"
+    },
+    {
+      "id": "B12_timeline_billing",
+      "method": "GET",
+      "route": "/patients/{id}/timeline",
+      "identity": "owner_a",
+      "expected": "billing-related events present",
+      "status": 200,
+      "result": "PASS",
+      "notes": "items=4 billing_hit=True"
+    },
+    {
+      "id": "X1_B_pathA_estimate",
+      "method": "GET",
+      "route": "/tenants/{A}/estimates/{id}",
+      "identity": "owner_b",
+      "expected": "404",
+      "status": 404,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "X2_B_hdrA_estimate",
+      "method": "GET",
+      "route": "/tenants/{A}/estimates/{id}",
+      "identity": "owner_b",
+      "expected": "403",
+      "status": 403,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "X1_B_pathA_invoice",
+      "method": "GET",
+      "route": "/tenants/{A}/invoices/{id}",
+      "identity": "owner_b",
+      "expected": "404",
+      "status": 404,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "X2_B_hdrA_invoice",
+      "method": "GET",
+      "route": "/tenants/{A}/invoices/{id}",
+      "identity": "owner_b",
+      "expected": "403",
+      "status": 403,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "X1_B_pathA_payment",
+      "method": "GET",
+      "route": "/tenants/{A}/payments/{id}",
+      "identity": "owner_b",
+      "expected": "404",
+      "status": 404,
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "X2_B_hdrA_payment",
+      "method": "GET",
+      "route": "/tenants/{A}/payments/{id}",
+      "identity": "owner_b",
+      "expected": "403",
+      "status": 403,
+      "result": "PASS",
+      "notes": ""
+    }
+  ],
+  "counts": {
+    "pass": 28,
+    "fail": 0,
+    "skip": 0
+  }
+}

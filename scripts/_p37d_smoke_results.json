@@ -1,0 +1,125 @@
+{
+  "preview": "https://micro-nest-medical-8eeq5wwe6-kaushal-bhats-projects.vercel.app",
+  "api": "https://micronest-medicalos.onrender.com",
+  "counts": {
+    "PASS": 8,
+    "FAIL": 3,
+    "BLOCKED": 10
+  },
+  "cookie_cross_site": {
+    "login_http": 200,
+    "me_status": 401,
+    "set_cookie_present": false,
+    "samesite": "unknown",
+    "secure": false,
+    "cookies_stored_for_api_host": 0,
+    "note": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+  },
+  "results": [
+    {
+      "id": "protection_bypass",
+      "status": "PASS",
+      "detail": "automation bypass loaded (value redacted)"
+    },
+    {
+      "id": "A_https_load",
+      "status": "PASS",
+      "detail": "status=200 ssoBlocked=false host=micro-nest-medical-8eeq5wwe6-kaushal-bhats-projects.vercel.app"
+    },
+    {
+      "id": "B_login_page",
+      "status": "PASS",
+      "detail": "host=micro-nest-medical-8eeq5wwe6-kaushal-bhats-projects.vercel.app"
+    },
+    {
+      "id": "D_invalid_login",
+      "status": "PASS",
+      "detail": "http=401 alert=true url_login=true"
+    },
+    {
+      "id": "C_owner_login",
+      "status": "FAIL",
+      "detail": "CROSS_SITE_COOKIE: login=200 me=401 set_cookie=false samesite=unknown stored=0"
+    },
+    {
+      "id": "E_logout",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "F_protected_route_anon",
+      "status": "PASS",
+      "detail": "path=/login"
+    },
+    {
+      "id": "G_workspace_dashboard",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "H_patient_directory",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "I_appointment_calendar",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "J_reception_queue",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "K_patient_360",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "L_billing_display",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "M_portal_login",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "N_cross_tenant_api",
+      "status": "BLOCKED",
+      "detail": "owner A API login=true list=404"
+    },
+    {
+      "id": "O_receptionist_controls",
+      "status": "BLOCKED",
+      "detail": "Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API."
+    },
+    {
+      "id": "P_cors",
+      "status": "PASS",
+      "detail": "api_calls=5 acao_preview_seen=true"
+    },
+    {
+      "id": "Q_cookie_security",
+      "status": "FAIL",
+      "detail": "{\"login_http\":200,\"me_status\":401,\"set_cookie_present\":false,\"samesite\":\"unknown\",\"secure\":false,\"cookies_stored_for_api_host\":0,\"note\":\"Login response succeeded but subsequent credentialed /me is 401 — likely SameSite=Lax / cross-site cookie blocking between Vercel Preview and Render API.\"}"
+    },
+    {
+      "id": "R_no_secrets_in_page",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "S_console_errors",
+      "status": "FAIL",
+      "detail": "Failed to load resource: the server responded with a status of 401 () | Failed to load resource: the server responded with a status of 401 () | Failed to load resource: the server responded with a status of 401 () | Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "id": "T_mobile_login_layout",
+      "status": "PASS",
+      "detail": ""
+    }
+  ]
+}

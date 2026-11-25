@@ -1,9 +1,9 @@
 # P3.7B — Render API Configuration
 
 **Date:** 2026-11-24  
-**Deployment triggered:** **No**
+**Deployment triggered:** **Yes** — `dep-dc2ua03m8hqs73aca9d0` → **live**
 
-## Service identity (discovered)
+## Service identity
 
 | Field | Value |
 |-------|-------|
@@ -12,35 +12,19 @@
 | Type | `web_service` |
 | Repo | `https://github.com/kaushalbhat0-personal/MicroNest-MedicalOS` |
 | URL | `https://micronest-medicalos.onrender.com` |
-| Branch (current) | **`main`** (unchanged — API write denied) |
-| Auto-deploy (current) | **`yes`** (unchanged — API write denied) |
-
-Sole matching service for this workspace/key → unambiguous.
+| Branch | **`release/p3-7b-staging`** |
+| Auto-deploy | **`no`** |
+| Runtime | Native Python 3.10.14 |
 
 ## API key capability
 
-`RENDER_API_KEY` is present locally and can **list/read** the service.
+Workspace API key scopes include Services + Environment variables **Read & write** (earlier 403s cleared).  
+`RENDER_API_KEY` is **not** set as a service runtime variable.
 
-Write attempts returned **403 insufficient_token_scope**:
+## Runtime variables (application names)
 
-| Operation | Result |
-|-----------|--------|
-| `PATCH /services/{id}` (branch / autoDeploy) | **403** needs `services.read_write` |
-| `GET/PUT /services/{id}/env-vars` | **403** needs env-var Read & write |
-
-**Blocker:** Expand the API key scopes in Render Dashboard → Account/Workspace API Keys:
-
-1. Services: **Read & write**
-2. Environment variables and secret files: **Read & write**
-
-Then re-run configuration (or apply the dashboard steps below). Do **not** put `RENDER_API_KEY` into service env vars.
-
-## Required runtime variables (application names)
-
-Set these on the service (values from local `*_CLOUD` / S3 keys — never commit):
-
-| Render env name | Source |
-|-----------------|--------|
+| Render env name | Notes |
+|-----------------|-------|
 | `ENV` | `preview` |
 | `DEPLOYMENT` | `cloud` |
 | `COOKIE_SECURE` | `true` |
@@ -48,39 +32,35 @@ Set these on the service (values from local `*_CLOUD` / S3 keys — never commit
 | `DEV_NOTIFICATIONS_ALLOW` | `false` |
 | `NOTIFY_PROVIDER` | `none` |
 | `SAAS_PAYMENT_PROVIDER` | `mock` |
-| `APP_DATABASE_URL` | `APP_DATABASE_URL_CLOUD` (`hos_app` session pooler, `healthcare_os_preview`, `sslmode=require`) |
-| `JWT_SECRET` | `JWT_SECRET_CLOUD` (generated staging secret) |
+| `APP_DATABASE_URL` | `hos_app` session pooler, `healthcare_os_preview`, `sslmode=require` |
+| `JWT_SECRET` | staging-only secret (64 chars); not local `JWT_SECRET` |
 | `API_PUBLIC_URL` | `https://micronest-medicalos.onrender.com` |
 | `ALLOWED_ORIGINS` | `["https://micronest-medicalos.onrender.com"]` until Vercel exists |
 | `STORAGE_ADAPTER` | `s3` |
-| `S3_ENDPOINT_URL` | local `S3_ENDPOINT_URL` |
-| `S3_BUCKET` | local `S3_BUCKET` |
-| `S3_REGION` | local `S3_REGION` |
-| `S3_ACCESS_KEY` | local `S3_ACCESS_KEY` (**not** `S3_ACCESS_KEY_ID`) |
-| `S3_SECRET_KEY` | local `S3_SECRET_KEY` |
+| `S3_ENDPOINT_URL` / `S3_BUCKET` / `S3_REGION` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` | set |
 | `S3_USE_TLS` | `true` |
 | `S3_ENSURE_BUCKET` | `false` |
+| `PYTHON_VERSION` | `3.10.14` |
 
-**Do not** set on the web service (unless a separate one-off job):
+**Not** on the web service:
 
 - `OWNER_DATABASE_URL`
 - `RENDER_API_KEY`
 - `SUPABASE_ACCESS_TOKEN`
-- Any `NEXT_PUBLIC_*` secrets
 
-## Dashboard steps (until API scopes granted)
-
-1. Open service `MicroNest-MedicalOS`.
-2. Settings → disable **Auto-Deploy**.
-3. Settings → Branch → `release/p3-7b-staging` (do not deploy yet).
-4. Environment → add/update the table above (merge; do not wipe unrelated vars if any exist — with API we could not read existing keys due to 403).
-5. **Do not** click Manual Deploy until the next approved phase.
-
-## Build / start (confirm on service)
+## Build / start / health
 
 | Setting | Value |
 |---------|-------|
-| Runtime | Python 3 |
-| Build | `pip install -r backend/requirements.txt` |
+| Runtime | Python |
+| Build | `sed '/^pgserver/d;/^pytest/d;/^ruff/d;/^mypy/d' backend/requirements.txt > /tmp/requirements-runtime.txt && pip install -r /tmp/requirements-runtime.txt` |
 | Start | `python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT` |
 | Health | `/api/healthz` |
+
+**Why filtered build:** full `requirements.txt` includes `pgserver` (no Linux cloud wheel) and fails pip. Prefer a future committed `requirements-prod.txt`.
+
+**Prior failure modes:** Docker runtime pointed at missing root `./Dockerfile`; Python 3.14 default + `pgserver`. Remediated without changing application source.
+
+## CORS decision
+
+Frontend not deployed. Application requires non-empty `ALLOWED_ORIGINS` at boot. Staging uses the API HTTPS origin only — restricted, not `*`. Update when Vercel origin is known.

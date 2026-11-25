@@ -1,31 +1,28 @@
 # P3.7B — Next Deployment Step
 
-**Do not deploy until the blockers below are cleared.**
+**Backend staging deploy:** complete (`dep-dc2ua03m8hqs73aca9d0` **live**).  
+See `P3-7B-backend-smoke-test.md` for evidence.
 
 ## Completed
 
-1. Branch `release/p3-7b-staging` committed + pushed (`9d3bedf…`).  
-2. Render service identified (`srv-dc2tmb49v7es73dkqc9g`, `https://micronest-medicalos.onrender.com`).  
-3. Release verification tests green locally.
+1. Branch `release/p3-7b-staging` committed + pushed.  
+2. Render service `MicroNest-MedicalOS` (`srv-dc2tmb49v7es73dkqc9g`) on branch `release/p3-7b-staging`, **auto-deploy off**.  
+3. Runtime env configured (hos_app pooler, staging JWT, S3, restricted CORS).  
+4. Native Python 3.10 runtime; filtered build (excludes local-only `pgserver`/test tools).  
+5. Smoke: healthz/readyz, DB role/DDL/Alembic 0027, unauth denial, synthetic S3 isolation.
 
-## Blockers
+## Remaining
 
-1. **API key scopes** — grant Services **Read & write** + Environment variables **Read & write**, **or** apply branch/env changes in the Render dashboard.  
-2. Point service branch to `release/p3-7b-staging` and **disable auto-deploy**.  
-3. Set required env vars (see `P3-7B-render-api-configuration.md`).  
-4. Confirm build/start/health paths.
+1. Seed synthetic staging tenants/users (or set `STAGING_SMOKE_EMAIL` / `STAGING_SMOKE_PASSWORD`) and re-run authenticated + cross-tenant API checks.  
+2. Deploy Vercel frontend; then extend `ALLOWED_ORIGINS` to the real frontend origin (never `*`).  
+3. Optional: commit `backend/requirements-prod.txt` and point Render build at it (replace `sed` filter).  
+4. Align operator docs so `JWT_SECRET_CLOUD` matches the Render staging secret process.
 
-## Then (approved deploy phase)
-
-1. Manual deploy of `release/p3-7b-staging` (still no auto-deploy).  
-2. Smoke: `/api/healthz`, `/api/readyz`, auth, tenant, synthetic patient, document access, storage.  
-3. Record results in `P3-7B-backend-smoke-test.md` / deployment report.  
-4. Later: Vercel frontend + extend `ALLOWED_ORIGINS`.
-
-## Explicit non-goals now
+## Explicit non-goals
 
 - No production deploy  
 - No `main` push  
-- No DB migrations on Render boot (staging already at 0027)  
-- No BYPASSRLS changes  
+- No auto-deploy  
+- No BYPASSRLS on `hos_app`  
+- No real patient data  
 - No SaaS payment live keys

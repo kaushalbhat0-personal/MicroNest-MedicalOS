@@ -1,0 +1,20 @@
+{
+  "platform": "win32",
+  "python": "3.10.11",
+  "cryptography": "50.0.2",
+  "checks": {
+    "dpapi_protect": "PASS",
+    "dek_not_plaintext_on_disk": "PASS",
+    "encrypted_db_write": "PASS",
+    "no_plaintext_phi_on_disk": "PASS",
+    "dpapi_unprotect_after_restart": "PASS",
+    "encrypted_db_read_after_restart": "PASS",
+    "offline_synthetic_patient_visible": "PASS",
+    "logout_wipes_local_artifacts": "PASS",
+    "online_offline_detectable": "PASS"
+  },
+  "network_probe_online": false,
+  "sqlcipher_engine": "NOT_USED_IN_POC",
+  "encryption": "AES-GCM file seal; DEK wrapped with DPAPI CurrentUser",
+  "timestamp": "2026-11-25T10:28:47Z"
+}

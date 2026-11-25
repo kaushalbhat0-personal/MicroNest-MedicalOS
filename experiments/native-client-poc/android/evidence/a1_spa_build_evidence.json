@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-03-25T10:30:00Z",
+  "command": "npm install && npm run build",
+  "cwd": "experiments/native-client-poc/android/spa",
+  "node": "v24.11.1",
+  "vite": "6.4.6",
+  "result": "PASS",
+  "outputs": ["dist/index.html", "dist/assets/index-*.js"],
+  "notes": [
+    "SPA builds as static assets suitable for Capacitor webDir",
+    "Capacitor Android project not generated (no JDK)",
+    "Keystore/SQLCipher not exercised by this build"
+  ]
+}

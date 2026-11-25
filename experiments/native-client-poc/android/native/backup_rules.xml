@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PoC guidance: disable unrestricted backup of local patient DBs -->
+<full-backup-content>
+  <exclude domain="database" path="." />
+  <exclude domain="sharedpref" path="hos_poc_sealed.xml" />
+  <exclude domain="file" path="databases/" />
+</full-backup-content>

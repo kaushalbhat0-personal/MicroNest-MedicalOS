@@ -1,0 +1,99 @@
+{
+  "preview": "https://micro-nest-medical-3jjkc67ds-kaushal-bhats-projects.vercel.app",
+  "counts": {
+    "PASS": 17
+  },
+  "network": {
+    "apiViaPreview": 14,
+    "apiViaRender": 0,
+    "redirectToRender": false,
+    "cacheControlPrivate": true
+  },
+  "results": [
+    {
+      "id": "A_healthz_proxy",
+      "status": "PASS",
+      "detail": "status=200 body_status=ok"
+    },
+    {
+      "id": "A_login_page",
+      "status": "PASS",
+      "detail": "host=micro-nest-medical-3jjkc67ds-kaushal-bhats-projects.vercel.app"
+    },
+    {
+      "id": "B_login_cookies",
+      "status": "PASS",
+      "detail": "login=200 me=200 set_cookie_count=2 jar_names=hos_refresh,hos_access attrs=[{\"name\":\"hos_access\",\"httponly\":true,\"secure\":true,\"samesite\":\"lax\",\"path\":\"/api\",\"hasDomain\":false},{\"name\":\"hos_refresh\",\"httponly\":true,\"secure\":true,\"samesite\":\"lax\",\"path\":\"/api/v1/auth\",\"hasDomain\":false}] url_host=micro-nest-medical-3jjkc67ds-kaushal-bhats-projects.vercel.app"
+    },
+    {
+      "id": "B_cookie_attrs",
+      "status": "PASS",
+      "detail": "[{\"name\":\"hos_access\",\"httponly\":true,\"secure\":true,\"samesite\":\"lax\",\"path\":\"/api\",\"hasDomain\":false},{\"name\":\"hos_refresh\",\"httponly\":true,\"secure\":true,\"samesite\":\"lax\",\"path\":\"/api/v1/auth\",\"hasDomain\":false}]"
+    },
+    {
+      "id": "B_cookie_paths",
+      "status": "PASS",
+      "detail": "[{\"name\":\"hos_access\",\"path\":\"/api\"},{\"name\":\"hos_refresh\",\"path\":\"/api/v1/auth\"}]"
+    },
+    {
+      "id": "A_no_render_redirect",
+      "status": "PASS",
+      "detail": "apiViaPreview=2 apiViaRender=0 redirectToRender=false"
+    },
+    {
+      "id": "C_dashboard",
+      "status": "PASS",
+      "detail": "path=/"
+    },
+    {
+      "id": "C_session_refresh",
+      "status": "PASS",
+      "detail": "me=200"
+    },
+    {
+      "id": "C_logout",
+      "status": "PASS",
+      "detail": "me=401 hos_remaining=0"
+    },
+    {
+      "id": "C_invalid_session",
+      "status": "PASS",
+      "detail": "me=401"
+    },
+    {
+      "id": "D_cross_tenant",
+      "status": "PASS",
+      "detail": "status=403"
+    },
+    {
+      "id": "D_receptionist_owner_controls",
+      "status": "PASS",
+      "detail": "staff_status=403"
+    },
+    {
+      "id": "D_portal_staff_denied",
+      "status": "PASS",
+      "detail": "path=/portal staff_api=403"
+    },
+    {
+      "id": "E_cache_control",
+      "status": "PASS",
+      "detail": "seen_private_no_store=true apiViaPreview=14"
+    },
+    {
+      "id": "E_no_secrets_in_page",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E_forged_forwarded_headers",
+      "status": "PASS",
+      "detail": "me=401"
+    },
+    {
+      "id": "E_console",
+      "status": "PASS",
+      "detail": "Failed to load resource: the server responded with a status of 401 () | Failed to load resource: the server responded with a status of 401 ()"
+    }
+  ]
+}

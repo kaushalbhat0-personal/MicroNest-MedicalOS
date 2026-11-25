@@ -1,0 +1,40 @@
+{
+  "results": {
+    "A_healthz": "PASS",
+    "A_readyz": "PASS",
+    "B_url_shape": "PASS",
+    "B_alembic": "PASS",
+    "B_alembic_app_denied": "PASS",
+    "B_role": "PASS",
+    "B_ddl_denied": "PASS",
+    "B_alter_denied": "PASS",
+    "B_rls_no_tenant": "PASS",
+    "C_unauth_me": "PASS",
+    "C_unauth_patients": "PASS",
+    "C_bad_login": "PASS",
+    "C_tenant_header_alone": "PASS",
+    "C_synth_login": "SKIP_NO_SYNTHETIC_ACCOUNT",
+    "C_seed_state": "users=0,tenants=0",
+    "D_upload_get_a": "PASS",
+    "D_distinct_ab": "PASS",
+    "D_public_denied": "PASS",
+    "D_signed_fetch": "PASS",
+    "D_expired_denied": "PASS",
+    "D_tampered_denied": "PASS",
+    "D_path_traversal": "PASS",
+    "D_iam_scope": "NOT_PER_TENANT \u2014 shared account/bucket credential (app-layer key + auth isolation required)",
+    "E_secret_leak": "PASS",
+    "E_error_log_count": "0",
+    "E_cors_wildcard": "PASS"
+  },
+  "fail_count": 0,
+  "deploy": {
+    "deploy_id": "dep-dc2ua03m8hqs73aca9d0",
+    "status": "live",
+    "commit": "293dc668e7117f20a4b88e7a3047aa8e501c99b6",
+    "service_url": "https://micronest-medicalos.onrender.com",
+    "branch": "release/p3-7b-staging",
+    "build_command_note": "excludes pgserver/pytest/ruff/mypy (local-only)",
+    "python_version": "3.10.14"
+  }
+}
