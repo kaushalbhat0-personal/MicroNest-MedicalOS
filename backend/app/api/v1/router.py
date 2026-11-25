@@ -13,6 +13,7 @@ from app.api.v1 import (
     encounters,
     inventory,
     invites,
+    native_auth,
     operations,
     patients,
     platform,
@@ -29,6 +30,7 @@ from app.api.v1 import (
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router, responses=error_handlers.AUTHN_RESPONSES)
+router.include_router(native_auth.router, responses=error_handlers.AUTHN_RESPONSES)
 router.include_router(account.router, responses=error_handlers.AUTHN_RESPONSES)
 router.include_router(invites.router, responses=error_handlers.AUTHN_RESPONSES)
 router.include_router(signup.router, responses=error_handlers.AUTHN_RESPONSES)

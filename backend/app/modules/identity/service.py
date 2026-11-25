@@ -126,9 +126,17 @@ def create_session(
     ip: str | None,
     user_agent: str | None,
     refresh_days: int,
+    client_platform: str | None = None,
+    device_label: str | None = None,
+    client_instance_id: str | None = None,
 ) -> tuple[Session, str]:
     secret = tokens.new_refresh_secret()
     now = _now()
+    platform = (client_platform or "").strip().lower() or None
+    if platform is not None and platform not in {"web", "windows", "android"}:
+        raise AuthError("unsupported client platform")
+    label = (device_label or "").strip()[:120] or None
+    instance = (client_instance_id or "").strip()[:64] or None
     session = Session(
         id=ids.uuid7(),
         user_id=user.id,
@@ -141,6 +149,9 @@ def create_session(
         revoked_reason=None,
         ip=ip,
         user_agent=(user_agent or "")[:300] or None,
+        client_platform=platform,
+        device_label=label,
+        client_instance_id=instance,
     )
     db.add(session)
     return session, secret
@@ -207,6 +218,9 @@ def rotate_session(
         revoked_reason=None,
         ip=ip,
         user_agent=current.user_agent,
+        client_platform=current.client_platform,
+        device_label=current.device_label,
+        client_instance_id=current.client_instance_id,
     )
     db.add(nxt)
     current.last_used_at = now

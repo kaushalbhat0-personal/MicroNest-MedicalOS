@@ -1,10 +1,15 @@
-"""Identity schemas. Responses never contain hashes, secrets, or tokens
-(tokens travel in HttpOnly cookies only)."""
+"""Identity schemas.
+
+Browser login/refresh responses never contain tokens (HttpOnly cookies only).
+Native JSON auth responses intentionally include access/refresh tokens for
+desktop clients — see B0 native auth design.
+"""
 
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -16,10 +21,46 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class NativeLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+    client_platform: Literal["windows", "android"] = "windows"
+    device_label: str | None = Field(default=None, max_length=120)
+    client_instance_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Opaque client install id (UUID string). Not proof-of-possession.",
+    )
+
+
+class NativeRefreshRequest(BaseModel):
+    refresh_token: str = Field(
+        min_length=10,
+        description="Opaque refresh: {session_id}.{secret}",
+    )
+
+
 class TenantOption(BaseModel):
     id: uuid.UUID
     slug: str
     name: str
+
+
+class NativeTokenResponse(BaseModel):
+    """Native session bootstrap. Tokens must not be logged by clients."""
+
+    access_token: str
+    refresh_token: str
+    token_type: Literal["bearer"] = "bearer"
+    expires_in: int
+    id: uuid.UUID
+    email: str
+    display_name: str
+    is_platform_admin: bool
+    email_verified: bool
+    tenants: list[TenantOption]
+    session_id: uuid.UUID
+    client_platform: str
 
 
 class MeResponse(BaseModel):

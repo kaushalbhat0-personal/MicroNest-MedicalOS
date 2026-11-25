@@ -72,10 +72,16 @@ class Session(Base):
     revoked_reason: Mapped[str | None] = mapped_column(String(80), nullable=True)
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    # Native / desktop association (nullable = legacy web cookie sessions).
+    # Not cryptographic proof-of-possession — see B0 design.
+    client_platform: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    device_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    client_instance_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     __table_args__ = (
         Index("ix_sessions_user", "user_id"),
         Index("ix_sessions_family", "family_id"),
+        Index("ix_sessions_client_platform", "client_platform"),
     )
 
 
